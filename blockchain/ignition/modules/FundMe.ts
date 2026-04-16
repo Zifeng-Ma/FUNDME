@@ -1,26 +1,14 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-// Hardhat Ignition uses a declarative approach
-export default buildModule("FundMeProtocolModule", (m) => {
-  // 1. Get local accounts (deployer will be index 0, treasury index 1)
-  const deployer = m.getAccount(0);
-  const treasury = m.getAccount(1);
+export default buildModule("FundMeModule", (m) => {
+  // 1. Deploy the underlying ERC20
+  const mockUSDC = m.contract("MockUSDC");
+  
+  // 2. Deploy the wrapper, passing in the ERC20 address
+  const fundMeToken = m.contract("FundMeToken", [mockUSDC]);
+  
+  // 3. Deploy platform (Assuming it requires the token address)
+  const fundMePlatform = m.contract("FundMePlatform", [fundMeToken]);
 
-  // 2. Deploy the Mock USDC token
-  const mockUSDC = m.contract("MockUSDC",[], { from: deployer });
-
-  // 3. Deploy the FundMeToken 
-  // We pass the deployed mockUSDC address and the treasury account
-  const fundMeToken = m.contract("FundMeToken", [mockUSDC, treasury], { 
-    from: deployer 
-  });
-
-  // 4. Deploy the FundMePlatform
-  // We pass the deployed fundMeToken address
-  const fundMePlatform = m.contract("FundMePlatform",[fundMeToken], { 
-    from: deployer 
-  });
-
-  // Return the deployed instances so Ignition knows about them
   return { mockUSDC, fundMeToken, fundMePlatform };
 });

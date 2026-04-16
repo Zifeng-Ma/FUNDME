@@ -1,75 +1,92 @@
 import "@nomicfoundation/hardhat-toolbox-viem";
 import hre from "hardhat";
-import { parseUnits, keccak256, toHex } from "viem";
-const { viem } = await hre.network.connect();
+import { parseUnits, parseEventLogs } from "viem";
+// NEW: Import the correct NOX handle client
+import { createViemHandleClient } from '@iexec-nox/handle';
 
 async function main() {
-  // Now, TypeScript will correctly recognize `hre.viem`
+  // @ts-ignore
+  const { viem } = await hre.network.connect();
   const publicClient = await viem.getPublicClient();
-  const [deployer, treasury, sponsor] = await viem.getWalletClients();
+  
+  // We use this walletClient directly for the NOX SDK
+  const [walletClient] = await viem.getWalletClients();
+  const userAddress = walletClient.account.address;
 
-  console.log(`Sponsoree (Deployer): ${deployer.account.address}`);
-  console.log(`Sponsor (Account 2):  ${sponsor.account.address}`);
+  console.log(`------------------------------------------------`);
+  console.log(`🚀 VERIFYING ON ARBITRUM SEPOLIA`);
+  console.log(`Wallet: ${userAddress}`);
+  console.log(`------------------------------------------------`);
 
-  // The addresses from your Ignition Deployment
-  const mockUsdcAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-  const fundMeTokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-  const fundMePlatformAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+  const mockUsdcAddress = "0xaf108417318b7BfdF9B74527326Cc5287080187e";
+  const fundMeTokenAddress = "0x347128DE4BEb35701927579869C32E0f1996dcc6";
+  const fundMePlatformAddress = "0x5dCa68Ceb507237196e0b903e67b5791d94A4DC2";
 
-  // Attach our deployed contracts using Viem
   const mockUSDC = await viem.getContractAt("MockUSDC", mockUsdcAddress);
   const fundMeToken = await viem.getContractAt("FundMeToken", fundMeTokenAddress);
   const fundMePlatform = await viem.getContractAt("FundMePlatform", fundMePlatformAddress);
 
-  console.log("\n------------------------------------------------");
-  console.log("🚀 STARTING THE HAPPY PATH VERIFICATION (VIEM)");
-  console.log("------------------------------------------------");
-
-  // --- Step 1: Give the Sponsor some USDC ---
-  console.log("\n👉 Step 1: Distributing Mock USDC...");
-  const transferAmount = parseUnits("1000", 6); // USDC typically has 6 decimals
+  // --- Step 1: Wrap USDC ---
+  console.log("\n👉 Step 1: Shielding USDC...");
+  const amount = parseUnits("10", 6); 
   
-  const hashTransfer = await mockUSDC.write.transfer([sponsor.account.address, transferAmount], {
-    account: deployer.account,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: hashTransfer });
-  console.log(`✅ Sent 1000 Mock USDC to the Sponsor's wallet.`);
-
-  // --- Step 2: Sponsor Shields USDC into $FUNDME ---
-  console.log("\n👉 Step 2: Shielding USDC into Confidential $FUNDME...");
-  
-  const hashApprove = await mockUSDC.write.approve([fundMeTokenAddress, transferAmount], {
-    account: sponsor.account,
-  });
+  console.log("Approving USDC...");
+  const hashApprove = await mockUSDC.write.approve([fundMeTokenAddress, amount]);
   await publicClient.waitForTransactionReceipt({ hash: hashApprove });
-  console.log(`✅ Sponsor approved the wrapper contract.`);
 
-  const hashShield = await fundMeToken.write.shield([transferAmount], {
-    account: sponsor.account,
-  });
-  await publicClient.waitForTransactionReceipt({ hash: hashShield });
-  console.log(`✅ Sponsor shielded 1000 USDC.`);
+  console.log("Wrapping into Confidential FUNDME...");
+  const hashWrap = await fundMeToken.write.wrap([userAddress, amount]);
+  await publicClient.waitForTransactionReceipt({ hash: hashWrap });
+  console.log(`✅ Wrapped successfully!`);
 
-  // --- Step 3: Sponsoree Creates a Funding Project ---
+  // --- Step 2: Grant Permission ---
+  console.log("\n👉 Step 2: Granting Operator Permission...");
+  const futureTimestamp = Math.floor(Date.now() / 1000) + 3600; 
+  
+  const hashSetOperator = await fundMeToken.write.setOperator([fundMePlatformAddress, futureTimestamp]);
+  await publicClient.waitForTransactionReceipt({ hash: hashSetOperator });
+  console.log(`✅ Platform is now an operator.`);
+
+  // --- Step 3: Create Project ---
   console.log("\n👉 Step 3: Creating a Funding Project...");
-  const hashProject = await fundMePlatform.write.createProject([7n, 3, "reclaim-github-proof-xyz"], {
-    account: deployer.account,
+  const hashProject = await fundMePlatform.write.createProject([7n, 3, "test-nox-verification"]);
+  const receiptProject = await publicClient.waitForTransactionReceipt({ hash: hashProject });
+  
+  const projectLogs = parseEventLogs({
+    abi: fundMePlatform.abi,
+    eventName: 'ProjectCreated',
+    logs: receiptProject.logs,
   });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: hashProject });
-  console.log(`✅ Project Created successfully! (Project ID: 0)`);
+  const projectId = projectLogs[0].args.projectId as bigint;
+  console.log(`✅ Project #${projectId} Created!`);
 
-  // --- Step 4: Sponsor Funds the Project Blindly ---
-  console.log("\n👉 Step 4: Sponsoring the Project with Encrypted Amount...");
+  // --- Step 4: Sponsor using the JS SDK ---
+  console.log(`\n👉 Step 4: Sponsoring Project #${projectId} with the JS SDK...`);
   
-  const mockEncryptedAmount = keccak256(toHex("ENCRYPTED_500_USDC_MOCK"));
+  const sponsorAmount = parseUnits("5", 6);
   
-  const hashSponsor = await fundMePlatform.write.sponsorProject([0n, mockEncryptedAmount], {
-    account: sponsor.account,
-  });
+  console.log("Initializing NOX Handle Client...");
+  // Initialize the NOX client using Hardhat's walletClient
+  const handleClient = await createViemHandleClient(walletClient);
+
+  console.log("Encrypting the sponsorship amount locally...");
+  // Use the encryptInput method to generate the external handle and the EIP-712 proof
+  const { handle, handleProof } = await handleClient.encryptInput(
+    sponsorAmount,
+    "uint256",
+    fundMePlatformAddress // The target contract that will execute Nox.fromExternal
+  );
+
+  console.log(`Sending the on-chain transaction with encrypted data...`);
+  const hashSponsor = await fundMePlatform.write.sponsorProject([
+    projectId, 
+    handle as `0x${string}`, 
+    handleProof as `0x${string}`
+  ]);
+  
   await publicClient.waitForTransactionReceipt({ hash: hashSponsor });
-  console.log(`✅ Sponsor funded Project #0 with encrypted bytes32 handle!`);
-
-  console.log("\n🎉 SUCCESS! The Viem-based Smart Contract Architecture is verified!");
+  
+  console.log(`✅ SUCCESS! Project #${projectId} blindly funded using the iExec NOX Protocol!`);
 }
 
 main().catch((error) => {
