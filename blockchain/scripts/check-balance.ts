@@ -5,7 +5,7 @@ async function main() {
   const { viem } = await hre.network.connect();
   const [walletClient] = await viem.getWalletClients();
   
-  const fundMeTokenAddress = "0x347128DE4BEb35701927579869C32E0f1996dcc6";
+  const fundMeTokenAddress = "0x50B1727faC42e8a1223d8BAD850c884Cbabe477e";
   const fundMeToken = await viem.getContractAt("FundMeToken", fundMeTokenAddress);
 
   // 1. Fetch the encrypted 'handle' from the blockchain

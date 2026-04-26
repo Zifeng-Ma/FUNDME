@@ -2,11 +2,12 @@ import hardhatViem from "@nomicfoundation/hardhat-viem";
 import { configVariable, defineConfig } from "hardhat/config";
 import hardhatIgnitionViemPlugin from "@nomicfoundation/hardhat-ignition-viem";
 import * as dotenv from "dotenv";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
 
 dotenv.config();
 
 export default defineConfig({
-  plugins: [hardhatViem, hardhatIgnitionViemPlugin],
+  plugins: [hardhatViem, hardhatIgnitionViemPlugin, hardhatVerify],
   solidity: {
     profiles: {
       default: {
@@ -40,8 +41,13 @@ export default defineConfig({
     },
     arbitrumSepolia: {
       type: "http",
-      url: process.env.RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
+      accounts: process.env.PRIVATE_KEY_DEPLOYER ? [process.env.PRIVATE_KEY_DEPLOYER] : [],
     }
+  },
+  verify: {
+    etherscan: {
+      apiKey: process.env.ARBISCAN_API_KEY,
+    },
   },
 });
