@@ -1,3 +1,17 @@
 .DS_Store
-*.json
-*.jsonl
+node_modules/
+dist/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Only ignore specific large/auto-generated JSON files if necessary
+# but allow package.json and tsconfig.json
+/blockchain/artifacts/
+/blockchain/cache/
+/blockchain/types/
+/web-app/.next/
+/web-app/out/
+/web-app/build/

@@ -1,0 +1,20 @@
+{
+  "name": "fundme-oracle",
+  "version": "1.0.0",
+  "description": "TEE Oracle service for FundMe leaderboard reveals",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@iexec-nox/handle": "^0.1.0-beta.10",
+    "dotenv": "^17.4.2",
+    "viem": "^2.48.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}
