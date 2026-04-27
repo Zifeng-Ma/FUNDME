@@ -63,7 +63,6 @@ const PLATFORM_ABI = parseAbi([
 interface LeaderboardEntry {
   rank: number;
   sponsor: Address;
-  amount?: string;
 }
 
 interface LeaderboardPayload {
@@ -72,7 +71,6 @@ interface LeaderboardPayload {
   isFinal: boolean;
   isAuction?: boolean;
   winnerAddress?: string;
-  minBidAmount?: number;
   totalFunded?: number;
   highestBid?: number;
   entries: LeaderboardEntry[];
@@ -178,7 +176,7 @@ async function processReveal(
   const [sponsoree, , topKLimit, , , , , , isAuction, minBidAmountRaw] = result;
   // minBidAmountRaw is in token units (6 decimals); convert to human-readable for comparisons
   const minBidAmount = minBidAmountRaw ? Number(minBidAmountRaw) / 1e6 : 0;
-  console.warn(`  Sponsoree: ${sponsoree}  topK: ${topKLimit}  isAuction: ${isAuction}  minBid: ${minBidAmount}`);
+  console.warn(`  Sponsoree: ${sponsoree}  topK: ${topKLimit}  isAuction: ${isAuction}`);
 
   // ── 2. Collect every unique sponsor for this project ──────────────────
   const sponsorLogs = await publicClient.getLogs({
@@ -253,9 +251,10 @@ async function processReveal(
   }
 
   // ── 4. Build leaderboard payload ───────────────────────────────────────
-  const totalFunded = sponsorsRanked.reduce(
-    (sum, s) => (s.amount !== null ? sum + s.amount : sum),
-    0,
+  // Aggregate stats (totalFunded, highestBid) are safe to publish.
+  // Individual per-sponsor amounts are never included — they stay private.
+  const totalFunded = parseFloat(
+    sponsorsRanked.reduce((sum, s) => (s.amount !== null ? sum + s.amount : sum), 0).toFixed(6),
   );
 
   // For auction mode, the winner must meet the minimum bid threshold (if set).
@@ -269,7 +268,7 @@ async function processReveal(
       : undefined;
 
   if (isAuction && isFinalReveal && sponsorsRanked.length > 0 && !auctionWinnerAddress) {
-    console.warn(`[Oracle] Auction: no sponsor met the minimum bid of ${minBidAmount} — no winner will be set`);
+    console.warn(`[Oracle] Auction: no sponsor met the minimum bid threshold — no winner will be set`);
   }
 
   const leaderboard: LeaderboardPayload = {
@@ -278,17 +277,17 @@ async function processReveal(
     isFinal: isFinalReveal,
     isAuction: isAuction as boolean,
     winnerAddress: auctionWinnerAddress,
-    minBidAmount: isAuction ? minBidAmount : undefined,
-    totalFunded: parseFloat(totalFunded.toFixed(6)),
-    highestBid: isAuction && sponsorsRanked[0]?.amount != null ? parseFloat(sponsorsRanked[0].amount.toFixed(6)) : undefined,
+    totalFunded,
+    highestBid: isAuction && sponsorsRanked[0]?.amount != null
+      ? parseFloat(sponsorsRanked[0].amount.toFixed(6))
+      : undefined,
     entries: topK.map((s, i) => ({
       rank: i + 1,
       sponsor: s.address,
-      amount: s.amount !== null ? s.amount.toFixed(6) : undefined,
     })),
   };
 
-  console.warn('[Oracle] Leaderboard:\n', JSON.stringify(leaderboard, null, 2));
+  console.warn(`[Oracle] Leaderboard built: projectId=${leaderboard.projectId} entries=${leaderboard.entries.length} isFinal=${leaderboard.isFinal}`);
 
   // ── 5. Pin to IPFS ─────────────────────────────────────────────────────
   console.warn('[Oracle] Pinning to IPFS…');

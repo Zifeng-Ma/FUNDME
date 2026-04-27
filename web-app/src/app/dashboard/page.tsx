@@ -150,10 +150,7 @@ export default function Dashboard() {
                     const res = await fetch(`${gateway}${latestHash}`);
                     if (!res.ok) continue;
                     const payload = await res.json() as LeaderboardPayload;
-                    if (payload.entries?.length > 0) {
-                      const topKTotal = payload.entries.reduce((sum, e) => sum + (e.amount ? parseFloat(e.amount) : 0), 0);
-                      totalFunded = topKTotal.toFixed(2);
-                    } else if (payload.totalFunded !== undefined) {
+                    if (payload.totalFunded !== undefined) {
                       totalFunded = payload.totalFunded.toFixed(2);
                     }
                     if (payload.highestBid !== undefined) {

@@ -124,7 +124,6 @@ export type ProjectRecord = {
 export type LeaderboardEntry = {
   rank: number;
   sponsor: `0x${string}`;
-  amount?: string;
 };
 
 export type LeaderboardPayload = {
@@ -133,7 +132,6 @@ export type LeaderboardPayload = {
   isFinal?: boolean;
   isAuction?: boolean;
   winnerAddress?: string;
-  minBidAmount?: number;
   totalFunded?: number;
   highestBid?: number;
   entries: LeaderboardEntry[];
