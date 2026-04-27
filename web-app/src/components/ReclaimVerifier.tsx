@@ -19,25 +19,23 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
 
   const handleStartVerification = async () => {
     try {
-      const appId = process.env.NEXT_PUBLIC_RECLAIM_APP_ID;
-      const appSecret = process.env.NEXT_PUBLIC_RECLAIM_APP_SECRET;
-      const providerId = process.env.NEXT_PUBLIC_RECLAIM_PROVIDER_ID;
-
-      if (!appId || !appSecret || !providerId) {
-        setVerifyState('failed');
-        setErrorMsg(
-          'Reclaim credentials not configured. Set NEXT_PUBLIC_RECLAIM_APP_ID, NEXT_PUBLIC_RECLAIM_APP_SECRET, and NEXT_PUBLIC_RECLAIM_PROVIDER_ID.'
-        );
-        return;
-      }
-
       setVerifyState('awaiting_proof');
       setErrorMsg(null);
+
+      // Initialize the Reclaim session server-side (secret stays on server)
+      const res = await fetch('/api/reclaim/request', { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setVerifyState('failed');
+        setErrorMsg(body.error ?? 'Failed to initialize verification session.');
+        return;
+      }
+      const { requestUrl: sessionUrl, serialized } = await res.json();
 
       // Dynamic import to defer the heavy crypto bundle
       const { ReclaimProofRequest } = await import('@reclaimprotocol/js-sdk');
 
-      const proofRequest = await ReclaimProofRequest.init(appId, appSecret, providerId);
+      const proofRequest = await ReclaimProofRequest.fromJsonString(serialized);
 
       const onSuccess = async (proof: any) => {
         try {
@@ -86,8 +84,7 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
         setErrorMsg(err?.message ?? 'Verification failed');
       };
 
-      const url = await proofRequest.getRequestUrl({ verificationMode: 'app' });
-      setRequestUrl(url);
+      setRequestUrl(sessionUrl);
 
       await proofRequest.startSession({ onSuccess, onError });
     } catch (err) {

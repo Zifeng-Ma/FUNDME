@@ -215,8 +215,8 @@ export default function Dashboard() {
 
         setMyCreatedProjects(created);
         setMySponsoredProjects(sponsored);
-      } catch (err) {
-        console.error('Failed to load project logs:', err);
+      } catch {
+        // silently ignore — UI shows empty state
       } finally {
         setIsLoadingProjects(false);
       }

@@ -243,25 +243,20 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       for (const gateway of gateways) {
         if (cancelled) break;
         const url = `${gateway}${latestLeaderboardHash}`;
-        console.warn('[leaderboard] trying gateway', { gateway, hash: latestLeaderboardHash });
         try {
           const res = await fetch(url);
-          console.warn('[leaderboard] IPFS response', { status: res.status, ok: res.ok, url });
           if (!res.ok) {
             lastError = `IPFS gateway returned ${res.status}`;
             continue;
           }
           const text = await res.text();
-          console.warn('[leaderboard] raw response text', text.slice(0, 500));
           const json = JSON.parse(text) as LeaderboardPayload;
-          console.warn('[leaderboard] parsed payload', json);
           if (!cancelled) {
             setLeaderboard(json);
             setLeaderboardLoading(false);
           }
           return;
         } catch (err) {
-          console.error('[leaderboard] gateway error', gateway, err);
           lastError = err instanceof Error ? err.message : 'Failed to fetch leaderboard';
         }
       }
@@ -405,7 +400,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
           : 'Sponsorship submitted confidentially. Rank updates on next leaderboard refresh.',
       );
     } catch (err) {
-      console.error(err);
       if (isUserRejection(err)) return;
       setSponsorError(
         isUnderpricedGasError(err)
@@ -430,24 +424,9 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
   const handleRefreshLeaderboard = async (isFinalReveal: boolean) => {
     if (!project || !isSponsoree || isRefreshing) return;
     setRefreshError(null);
-    console.warn('[reveal] handleRefreshLeaderboard called', {
-      projectId,
-      isFinalReveal,
-      isSponsoree,
-      address,
-      project: {
-        sponsoree: project.sponsoree,
-        deadline: project.deadline.toString(),
-        isFinalized: project.isFinalized,
-        lastRevealTimestamp: project.lastRevealTimestamp.toString(),
-      },
-      cooldownRemaining,
-      nowSeconds: Math.floor(Date.now() / 1000),
-    });
     try {
       setIsRefreshing(true);
       const gasOverride = publicClient ? await getGasOverride(publicClient) : {};
-      console.warn('[reveal] gasOverride', gasOverride);
       const txHash = await writeContractAsync({
         address: FUNDME_PLATFORM_ADDRESS,
         abi: PLATFORM_ABI,
@@ -456,14 +435,12 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
         chainId: CHAIN_ID,
         ...gasOverride,
       });
-      console.warn('[reveal] tx submitted', txHash);
       await refetchProject();
 
       // Poll for the oracle's fulfillLeaderboard response. The oracle picks up the
       // RevealRequested event and calls fulfillLeaderboard asynchronously, so we
       // can't just refetch once — we poll until the hash count grows or we timeout.
       const previousHashCount = (leaderboardHistory as readonly string[] | undefined)?.length ?? 0;
-      console.warn('[reveal] waiting for oracle, current hash count:', previousHashCount);
       setIsRefreshing(false);
       setAwaitingOracle(true);
 
@@ -482,9 +459,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
             }) as readonly string[]
           : [];
         const newCount = freshHistory.length;
-        console.warn('[reveal] poll: hash count', newCount, 'previous', previousHashCount);
         if (newCount > previousHashCount) {
-          console.warn('[reveal] oracle fulfilled — new hash count:', newCount);
           // Sync all dependent reads so panels update without a manual page refresh.
           await Promise.all([
             refetchLeaderboard(),
@@ -499,7 +474,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
           return;
         }
         if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
-          console.warn('[reveal] oracle poll timed out');
           setAwaitingOracle(false);
           setRefreshError('Oracle has not responded yet. The leaderboard will appear once it does — try refreshing the page in a moment.');
           // Still sync wagmi so any previously-published hashes become visible
@@ -520,12 +494,8 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
 
       await poll();
     } catch (err) {
-      console.error('[reveal] error', err);
       setAwaitingOracle(false);
-      if (isUserRejection(err)) {
-        console.warn('[reveal] user rejected tx');
-        return;
-      }
+      if (isUserRejection(err)) return;
       setRefreshError(
         isUnderpricedGasError(err)
           ? 'Base fee too high — retry with Aggressive gas.'

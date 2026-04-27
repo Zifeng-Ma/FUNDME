@@ -126,7 +126,6 @@ export default function CreateCampaignPage() {
         router.push('/projects');
       }
     } catch (err) {
-      console.error(err);
       if (isUserRejection(err)) {
         setError(null);
         return;
