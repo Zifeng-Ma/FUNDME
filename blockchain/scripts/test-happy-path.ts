@@ -13,8 +13,8 @@ import { arbitrumSepolia } from 'viem/chains';
 import 'dotenv/config';
 
 const USDC_ADDRESS = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as Address;
-const FUND_ME_TOKEN_ADDRESS = '0x50B1727faC42e8a1223d8BAD850c884Cbabe477e' as Address;
-const FUND_ME_PLATFORM_ADDRESS = '0xDfD8E4d158c8dFA2043e23f6630907a30b79fD82' as Address;
+const FUND_ME_TOKEN_ADDRESS = '0x6D15F83cbCcCF396CB84E21805d54473864a67B9' as Address;
+const FUND_ME_PLATFORM_ADDRESS = '0xD74cC75D381d607f49Bb0D647f8f719E185EeF3A' as Address;
 
 // 1 USDC per sponsor
 const SPONSOR_AMOUNT = parseUnits('1', 6);
@@ -179,31 +179,84 @@ async function main() {
   await publicClient.waitForTransactionReceipt({ hash: cooldownTx });
   console.log('  ✅ Cooldown updated.');
 
-  // ── Step 1: Create project ──────────────────────────────────────────────────
-  console.log('\n=== Step 1: Create Project ===');
-  const creatorClient = walletClients[creatorIndex];
-  const platformAsCreator = getContract({
-    address: FUND_ME_PLATFORM_ADDRESS,
-    abi: platformArtifact.abi,
-    client: creatorClient,
-  });
+  // ── Step 1: Create 8 demo projects ──────────────────────────────────────────
+  console.log('\n=== Step 1: Create 8 Demo Projects ===');
 
-  const projectId = (await platformRO.read.nextProjectId()) as bigint;
-  console.log(`  Expected projectId: ${projectId}`);
+  const demoProjects = [
+    {
+      walletIdx: 0,
+      title: 'DeSci: Genomic Privacy Research',
+      desc: 'Funding for open-source research into privacy-preserving genomic data sharing using FHE.',
+      duration: 120n, topK: 5, isAuction: false, minBid: 0n
+    },
+    {
+      walletIdx: 1,
+      title: 'Privacy-First Hardware Wallet',
+      desc: 'An open-source hardware wallet with native support for confidential assets and encrypted transactions.',
+      duration: 60n, topK: 1, isAuction: true, minBid: parseUnits('10', 6)
+    },
+    {
+      walletIdx: 2,
+      title: 'ZK-EVM Circuit Optimization',
+      desc: 'Specialized grants for developers working on reducing proving times for production ZK-EVMs.',
+      duration: 180n, topK: 3, isAuction: false, minBid: 0n
+    },
+    {
+      walletIdx: 3,
+      title: 'Confidential DEX Aggregator',
+      desc: 'Building a liquidity aggregator that masks trade sizes and slippage data using TEEs.',
+      duration: 90n, topK: 1, isAuction: true, minBid: parseUnits('5', 6)
+    },
+    {
+      walletIdx: 0,
+      title: 'On-chain Credit Scoring',
+      desc: 'Privacy-preserving credit scores using zero-knowledge proofs and historical DeFi activity.',
+      duration: 240n, topK: 10, isAuction: false, minBid: 0n
+    },
+    {
+      walletIdx: 1,
+      title: 'Shielded NFT Marketplace',
+      desc: 'A marketplace where ownership history is encrypted, allowing private transfers of high-value art.',
+      duration: 45n, topK: 1, isAuction: true, minBid: parseUnits('2', 6)
+    },
+    {
+      walletIdx: 2,
+      title: 'FHE-powered Dark Pool',
+      desc: 'An institutional-grade dark pool using Fully Homomorphic Encryption for complete order-book privacy.',
+      duration: 300n, topK: 2, isAuction: false, minBid: 0n
+    },
+    {
+      walletIdx: 3,
+      title: 'The Alpha Pass Auction',
+      desc: 'Exclusive access pass for the FundMe private alpha. Only the highest bidder wins the unique soulbound NFT pass!',
+      duration: 5n, topK: 1, isAuction: true, minBid: parseUnits('0.5', 6)
+    }
+  ];
 
-  const topKLimit = 1; // Only 1 winner to test refunds for others
-  const createTx = await platformAsCreator.write.createProject([
-    3n, // 3 minutes duration
-    topKLimit,
-    'test-reclaim-proof',
-    'Happy Path Test',
-    'End-to-end integration test',
-    false,
-    0n,
-    60n, // 60s per-project cooldown
-  ]);
-  console.log(`  tx: ${createTx}`);
-  await publicClient.waitForTransactionReceipt({ hash: createTx });
+  for (const demo of demoProjects) {
+    console.log(`  Wallet [${demo.walletIdx + 1}] creating: ${demo.title}...`);
+    const client = walletClients[demo.walletIdx];
+    const platform = getContract({
+      address: FUND_ME_PLATFORM_ADDRESS,
+      abi: platformArtifact.abi,
+      client: client,
+    });
+
+    const tx = await platform.write.createProject([
+      demo.duration,
+      demo.topK,
+      '', // Always empty proofId
+      demo.title,
+      demo.desc,
+      demo.isAuction,
+      demo.minBid,
+      60n,
+    ]);
+    await publicClient.waitForTransactionReceipt({ hash: tx });
+  }
+
+  const projectId = (await platformRO.read.nextProjectId()) as bigint - 1n;
+  console.log(`\n  Using last project for Happy Path test: ID ${projectId}`);
 
   const projectData = (await platformRO.read.projects([projectId])) as any[];
   const project = {
@@ -211,6 +264,12 @@ async function main() {
     deadline: projectData[1] as bigint,
     topKLimit: projectData[2] as number,
   };
+  const platformAsCreator = getContract({
+    address: FUND_ME_PLATFORM_ADDRESS,
+    abi: platformArtifact.abi,
+    client: walletClients[demoProjects[demoProjects.length - 1].walletIdx],
+  });
+  const topKLimit = project.topKLimit;
   console.log(`  deadline: ${new Date(Number(project.deadline) * 1000).toLocaleString()}`);
 
   // ── Step 2: Sponsor the project (each sponsor) ──────────────────────────────

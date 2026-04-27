@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Shield, Trophy, Cpu, Lock, ChevronRight, Zap, Fingerprint, Globe } from "lucide-react";
 import { motion } from "framer-motion";
+import Image from "next/image";
+import iexecLogo from "../../assets/iexec_logo.png";
+import reclaimLogo from "../../assets/reclaim_protocol_logo.png";
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
@@ -131,6 +134,80 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Organizer Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="bg-indigo-600/5 border border-indigo-500/20 rounded-[3rem] p-12 md:p-20 relative">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-indigo-500/10 to-transparent pointer-events-none" />
+            
+            <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
+              <div>
+                <h2 className="text-sm font-bold tracking-[0.2em] text-indigo-400 uppercase mb-4">Organizer Portal</h2>
+                <h3 className="text-4xl md:text-5xl font-bold mb-8 leading-tight">Build Trust with <br /> Verified Campaigns</h3>
+                <p className="text-xl text-neutral-400 mb-10 leading-relaxed">
+                  FundMe gives you the tools to launch credible, confidential crowdfunding campaigns. 
+                  Leverage cutting-edge protocols to prove your identity and protect your backers.
+                </p>
+                
+                <div className="space-y-8">
+                  <div className="flex gap-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 p-2">
+                      <Image src={reclaimLogo} alt="Reclaim" width={32} height={32} />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">Proof of Personhood & Socials</h4>
+                      <p className="text-neutral-500">Use <strong>Reclaim Protocol</strong> to verify your GitHub, LinkedIn, or Twitter without revealing sensitive account data. Build instant trust with your community.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 p-2">
+                      <Image src={iexecLogo} alt="iExec" width={32} height={32} />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-bold mb-2">Confidential Computation</h4>
+                      <p className="text-neutral-500">With <strong>iExec Nox</strong>, your project&apos;s sensitive logic and contributor rankings are handled in a secure enclave (TEE), ensuring privacy and integrity.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative group">
+                <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] rounded-full group-hover:bg-indigo-500/30 transition-all" />
+                <div className="bg-neutral-950 border border-neutral-800 p-8 rounded-3xl relative overflow-hidden">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <Shield className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-neutral-500">Campaign Status</div>
+                      <div className="font-bold">Verified Creator</div>
+                    </div>
+                    <div className="ml-auto px-3 py-1 rounded-full bg-green-500/10 text-green-400 text-xs font-bold border border-green-500/20">
+                      ACTIVE
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="h-2 w-full bg-neutral-900 rounded-full overflow-hidden">
+                      <div className="h-full w-2/3 bg-indigo-500" />
+                    </div>
+                    <div className="flex justify-between text-sm mb-8">
+                      <span className="text-neutral-500">75% of goal reached</span>
+                      <span className="text-white font-mono">Confidential Amount</span>
+                    </div>
+                    
+                    <Link href="/create" className="block w-full py-4 rounded-xl bg-white text-black text-center font-bold hover:bg-neutral-200 transition-colors">
+                      Start Your Campaign
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Leaderboard Preview / Gamification */}
       <section className="py-32 bg-neutral-900/20 border-y border-neutral-800/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/10 blur-[150px] rounded-full pointer-events-none" />
@@ -230,8 +307,17 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-wrap justify-center items-center gap-x-20 gap-y-12">
             <div className="text-3xl font-black italic tracking-tighter text-white">ARBITRUM</div>
-            <div className="text-2xl font-bold font-mono text-blue-400 flex items-center gap-2">
-                <Cpu className="w-6 h-6" /> iExec Nox
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10">
+                  <Image src={iexecLogo} alt="iExec" width={32} height={32} />
+                </div>
+                <span className="text-2xl font-bold font-mono text-blue-400">iExec Nox</span>
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10">
+                  <Image src={reclaimLogo} alt="Reclaim" width={32} height={32} />
+                </div>
+                <span className="text-2xl font-bold font-mono text-purple-400">Reclaim</span>
             </div>
             <div className="text-xl font-bold border-2 border-white px-4 py-1">ERC-7984</div>
             <div className="text-3xl font-bold text-white tracking-tighter">VIEM</div>

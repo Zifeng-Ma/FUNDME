@@ -39,7 +39,7 @@ const STARTUP_LOOKBACK = BigInt(
 );
 
 const FUNDME_PLATFORM_ADDRESS =
-  '0xDfD8E4d158c8dFA2043e23f6630907a30b79fD82' as const;
+  '0xD74cC75D381d607f49Bb0D647f8f719E185EeF3A' as const;
 
 // ---------------------------------------------------------------------------
 // ABIs (minimal – only what the oracle needs)

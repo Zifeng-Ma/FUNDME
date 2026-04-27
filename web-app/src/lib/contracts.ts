@@ -2,8 +2,8 @@ import { parseAbi } from 'viem';
 import { arbitrumSepolia } from 'viem/chains';
 
 // --- Deployed Contract Addresses (Arbitrum Sepolia) ---
-export const FUNDME_TOKEN_ADDRESS = '0x50B1727faC42e8a1223d8BAD850c884Cbabe477e' as const;
-export const FUNDME_PLATFORM_ADDRESS = '0xDfD8E4d158c8dFA2043e23f6630907a30b79fD82' as const;
+export const FUNDME_TOKEN_ADDRESS = '0x6D15F83cbCcCF396CB84E21805d54473864a67B9' as const;
+export const FUNDME_PLATFORM_ADDRESS = '0xD74cC75D381d607f49Bb0D647f8f719E185EeF3A' as const;
 export const USDC_ADDRESS = '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' as const;
 
 // The ERC-7984 wrapper mirrors the underlying testnet USDC, which is 6-decimal.

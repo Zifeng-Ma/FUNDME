@@ -1,6 +1,6 @@
 import hre from "hardhat";
 
-const FUNDME_PLATFORM_ADDRESS = "0xDfD8E4d158c8dFA2043e23f6630907a30b79fD82";
+const FUNDME_PLATFORM_ADDRESS = "0xD74cC75D381d607f49Bb0D647f8f719E185EeF3A";
 const COOLDOWN_SECONDS = 30n;
 
 async function main() {
