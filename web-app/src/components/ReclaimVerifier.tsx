@@ -42,7 +42,7 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
       const onSuccess = async (proof: any) => {
         try {
           const { verifyProof } = await import('@reclaimprotocol/js-sdk');
-          await verifyProof(proof);
+          await verifyProof(proof, proofRequest.getProviderVersion());
 
           const proofId = proof.identifier as string;
 
