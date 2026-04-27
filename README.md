@@ -19,9 +19,9 @@ FUNDME is a confidential crowdfunding platform built on **Arbitrum Sepolia**. Co
 ## Architecture
 
 ```
-┌──────────────┐     sponsor / create      ┌──────────────────────┐
+┌──────────────┐     sponsor / create       ┌──────────────────────┐
 │   Web App    │ ──────────────────────── ▶ │  FundMePlatform.sol  │
-│  (Next.js)   │ ◀ ─────────────────────── │  FundMeToken.sol     │
+│  (Next.js)   │ ◀ ───────────────────────  │  FundMeToken.sol     │
 └──────────────┘     read state / events    │  (Arbitrum Sepolia)  │
                                             └──────────┬───────────┘
                                                        │ RevealRequested event
