@@ -72,7 +72,7 @@ export const PLATFORM_ABI = parseAbi([
   'event RefundClaimed(uint256 indexed projectId, address indexed sponsor)',
 ]);
 
-// Gas limit for sponsorProject. The function executes 5 Nox FHE operations
+// Gas limit for sponsorProject. The function executes 5 Nox TEE operations
 // (fromExternal, allowTransient, confidentialTransferFrom, add, allow) which
 // genuinely cost 2–5 M gas on Arbitrum Sepolia.  We pin an upper bound here so
 // that MetaMask never falls back to the block gas limit (~32 M) when

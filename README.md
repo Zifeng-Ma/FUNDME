@@ -46,7 +46,7 @@ FUNDME is a confidential crowdfunding platform built on **Arbitrum Sepolia**. Co
 ## Features
 
 ### Confidential Contributions
-Sponsor amounts are encrypted with FHE before hitting the chain. Only the TEE oracle can decrypt them — contribution sizes are never exposed publicly.
+Sponsor amounts are encrypted inside a TEE before hitting the chain. Only the TEE oracle can decrypt them — contribution sizes are never exposed publicly.
 
 ### Live Leaderboards via TEE
 ![Campaign Detail](images/7.png)
@@ -325,7 +325,7 @@ After the deadline and top-K sponsors are set, non-winners can visit the campaig
 ## How It Works
 
 1. **Sponsor wraps USDC** into encrypted `FundMeToken` and sets `FundMePlatform` as operator.
-2. **Sponsor calls `sponsorProject()`** with an encrypted contribution amount. The contract stores an FHE handle; the oracle is granted ACL access to decrypt it.
+2. **Sponsor calls `sponsorProject()`** with an encrypted contribution amount. The contract stores an encrypted handle; the oracle is granted ACL access to decrypt it.
 3. **Creator (or sponsor) calls `requestReveal()`** — a `RevealRequested` event is emitted on-chain.
 4. **Oracle picks up the event**, decrypts all contributions in TEE, ranks by amount (block-number tiebreaker), pins JSON to IPFS, and calls `fulfillLeaderboard()` on-chain.
 5. **After the deadline**, `setTopKSponsors()` is called, locking winners. Creator calls `withdrawProjectFunds()`; non-winners call `claimRefund()`.
@@ -336,7 +336,7 @@ After the deadline and top-K sponsors are set, non-winners can visit the campaig
 
 | What | Visible |
 |---|---|
-| Contribution amounts | Never — encrypted with FHE |
+| Contribution amounts | Never — encrypted via TEE |
 | Sponsor addresses (winners) | Yes — required for fund distribution |
 | Sponsor addresses (non-winners) | Pseudonymous — only exposed if they claim a refund |
 | Leaderboard rankings | Public after each reveal (IPFS) |
