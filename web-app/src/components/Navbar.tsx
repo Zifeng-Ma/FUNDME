@@ -1,8 +1,9 @@
 'use client'; // This is a client component
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Lock, LogOut, Wallet } from "lucide-react";
+import { LogOut, Wallet } from "lucide-react";
 import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { arbitrumSepolia } from 'wagmi/chains'
 import { AddressLink } from "./AddressLink";
@@ -28,7 +29,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo and App Name */}
         <Link href="/" className="flex items-center gap-2">
-          <Lock className="w-6 h-6 text-indigo-500" />
+          <Image src="/logo.png" alt="FundMe logo" width={32} height={32} />
           <span className="text-xl font-bold tracking-widest uppercase">FundMe</span>
         </Link>
         
