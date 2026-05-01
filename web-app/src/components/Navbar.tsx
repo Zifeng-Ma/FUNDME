@@ -26,7 +26,7 @@ export function Navbar() {
   const isWrongChain = isConnected && chainId !== arbitrumSepolia.id;
 
   return (
-    <nav className="border-b border-blue-500/10 bg-black/80 backdrop-blur-md sticky top-0 w-full z-50 font-mono">
+    <nav className="border-b border-border-strong bg-surface-raised/80 backdrop-blur-md sticky top-0 w-full z-50 font-mono">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo and App Name */}
         <Link href="/" className="flex items-center gap-3 group">

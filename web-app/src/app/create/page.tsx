@@ -155,10 +155,11 @@ export default function CreateCampaignPage() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen pt-24 px-6 flex justify-center items-center bg-black">
+      <div className="min-h-screen pt-24 px-6 flex justify-center items-center bg-black relative overflow-hidden">
+        <BackgroundAnimation />
         <motion.div 
           {...fadeInUp}
-          className="text-center bg-[#050505] p-12 border border-blue-500/20 max-w-md"
+          className="text-center bg-surface-raised/60 backdrop-blur-2xl p-12 border border-border-strong max-w-md relative z-10 hover-glow"
         >
           <Wallet className="w-16 h-16 text-blue-500/40 mx-auto mb-6" />
           <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-4">Connect to create</h2>
@@ -177,215 +178,248 @@ export default function CreateCampaignPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-neutral-200">
-      <InfiniteDataStream text="[NODE_INITIALIZATION] —— PROTOCOL_CREATION_MODE —— TEE_CONFIG_PENDING —— " color="indigo" />
+    <div className="min-h-screen bg-surface-base text-neutral-200 relative overflow-hidden">
+      {/* Dynamic Background Layer */}
+      <BackgroundAnimation />
       
-      <div className="max-w-4xl mx-auto px-6 pt-12 pb-24">
-        <Link
-          href="/projects"
-          className="inline-flex items-center gap-2 text-[10px] font-mono text-neutral-500 hover:text-blue-400 mb-12 uppercase tracking-widest transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> All campaigns
-        </Link>
+      <div className="relative z-10">
+        <InfiniteDataStream text="[NODE_INITIALIZATION] —— PROTOCOL_CREATION_MODE —— TEE_CONFIG_PENDING —— " color="indigo" />
+        
+        <div className="max-w-4xl mx-auto px-6 pt-12 pb-24">
+          <Link
+            href="/projects"
+            className="inline-flex items-center gap-2 text-[10px] font-mono text-neutral-500 hover:text-blue-400 mb-12 uppercase tracking-widest transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> All campaigns
+          </Link>
 
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-16"
-        >
-          <div className="flex items-center gap-3 text-indigo-400 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
-            <Rocket className="w-4 h-4" />
-            <span>Deployment Interface</span>
-          </div>
-          <h1 className="text-6xl font-black tracking-tighter text-white uppercase mb-6 leading-none">
-            Launch <span className="text-indigo-500">Campaign.</span>
-          </h1>
-          <p className="text-neutral-500 font-mono text-sm uppercase max-w-lg">
-            SET DURATION, LEADERBOARD CONSTRAINTS, AND IDENTITY VERIFICATION PROTOCOLS. ALL DATA IS WRAPPED IN NOX ENCLAVE ARCHITECTURE.
-          </p>
-        </motion.div>
-
-        <motion.div 
-          {...fadeInUp}
-          className="bg-[#050505] border-2 border-indigo-500/20 p-1 font-mono group"
-        >
-          <div className="bg-indigo-500/10 p-4 border border-indigo-500/20 mb-1 flex justify-between items-center">
-            <span className="text-indigo-500 uppercase text-[10px]">Campaign_Config // Enclave_Init</span>
-            <div className="flex gap-2">
-              <div className="w-2 h-2 bg-indigo-500/50 rounded-full animate-pulse" />
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-16"
+          >
+            <div className="flex items-center gap-3 text-indigo-400 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
+              <Rocket className="w-4 h-4" />
+              <span>Deployment Interface</span>
             </div>
-          </div>
-          
-          <div className="p-8 space-y-10">
-            <Field
-              label="Campaign_Title"
-              icon={<FileText className="w-4 h-4" />}
-            >
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="INIT_TITLE"
-                className="w-full bg-black border border-indigo-500/10 py-4 px-4 text-white font-mono text-lg focus:outline-none focus:border-indigo-500/50 transition-colors placeholder-neutral-800 uppercase"
-              />
-            </Field>
+            <h1 className="text-6xl font-black tracking-tighter text-white uppercase mb-6 leading-none">
+              Launch <span className="text-indigo-500">Campaign.</span>
+            </h1>
+            <p className="text-neutral-500 font-mono text-sm uppercase max-w-lg">
+              SET DURATION, LEADERBOARD CONSTRAINTS, AND IDENTITY VERIFICATION PROTOCOLS. ALL DATA IS WRAPPED IN NOX ENCLAVE ARCHITECTURE.
+            </p>
+          </motion.div>
 
-            <Field
-              label="Operational_Description"
-              icon={<Terminal className="w-4 h-4" />}
-            >
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="DESCRIBE_OBJECTIVES..."
-                rows={3}
-                className="w-full bg-black border border-indigo-500/10 py-4 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors placeholder-neutral-800 resize-none uppercase"
-              />
-            </Field>
-
-            <div className="grid md:grid-cols-2 gap-10">
+          <motion.div 
+            {...fadeInUp}
+            className="bg-surface-raised/40 backdrop-blur-3xl border-2 border-indigo-500/20 p-1 font-mono group hover-glow"
+          >
+            <div className="bg-indigo-500/10 p-4 border border-indigo-500/20 mb-1 flex justify-between items-center">
+              <span className="text-indigo-500 uppercase text-[10px]">Campaign_Config // Enclave_Init</span>
+              <div className="flex gap-2">
+                <div className="w-2 h-2 bg-indigo-500/50 rounded-full animate-pulse" />
+              </div>
+            </div>
+            
+            <div className="p-8 space-y-10">
               <Field
-                label="Execution_Mode"
-                icon={<Zap className="w-4 h-4" />}
+                label="Campaign_Title"
+                icon={<FileText className="w-4 h-4" />}
               >
-                <div className="flex bg-black p-1 border border-indigo-500/10">
-                  <button
-                    type="button"
-                    onClick={() => setIsAuction(false)}
-                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                      !isAuction
-                        ? 'bg-indigo-500 text-black'
-                        : 'text-neutral-500 hover:text-white'
-                    }`}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsAuction(true); setTopK('1'); }}
-                    className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                      isAuction
-                        ? 'bg-amber-500 text-black'
-                        : 'text-neutral-500 hover:text-white'
-                    }`}
-                  >
-                    Auction
-                  </button>
-                </div>
-                {isAuction && (
-                  <p className="mt-2 text-[9px] text-amber-500 uppercase tracking-tight">
-                    * HIGHEST SINGLE BIDDER WINS. AUTO-REFUND ENABLED.
-                  </p>
-                )}
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="INIT_TITLE"
+                  className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-4 px-4 text-white font-mono text-lg focus:outline-none focus:border-indigo-500/50 transition-colors placeholder-neutral-800 uppercase"
+                />
               </Field>
 
-              {isAuction && (
+              <Field
+                label="Operational_Description"
+                icon={<Terminal className="w-4 h-4" />}
+              >
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="DESCRIBE_OBJECTIVES..."
+                  rows={3}
+                  className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-4 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors placeholder-neutral-800 resize-none uppercase"
+                />
+              </Field>
+
+              <div className="grid md:grid-cols-2 gap-10">
                 <Field
-                  label="Minimum_Bid"
+                  label="Execution_Mode"
                   icon={<Zap className="w-4 h-4" />}
-                  suffix="FME"
+                >
+                  <div className="flex bg-surface-overlay/50 p-1 border border-indigo-500/10">
+                    <button
+                      type="button"
+                      onClick={() => setIsAuction(false)}
+                      className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                        !isAuction
+                          ? 'bg-indigo-500 text-black'
+                          : 'text-neutral-500 hover:text-white'
+                      }`}
+                    >
+                      Standard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsAuction(true); setTopK('1'); }}
+                      className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                        isAuction
+                          ? 'bg-amber-500 text-black'
+                          : 'text-neutral-500 hover:text-white'
+                      }`}
+                    >
+                      Auction
+                    </button>
+                  </div>
+                  {isAuction && (
+                    <p className="mt-2 text-[9px] text-amber-500 uppercase tracking-tight">
+                      * HIGHEST SINGLE BIDDER WINS. AUTO-REFUND ENABLED.
+                    </p>
+                  )}
+                </Field>
+
+                {isAuction && (
+                  <Field
+                    label="Minimum_Bid"
+                    icon={<Zap className="w-4 h-4" />}
+                    suffix="FME"
+                  >
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={minBid}
+                      onChange={(e) => setMinBid(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-amber-500/50 transition-colors placeholder-neutral-800"
+                    />
+                  </Field>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-10">
+                <Field
+                  label="Duration"
+                  icon={<Clock className="w-4 h-4" />}
+                  suffix="MIN"
                 >
                   <input
                     type="number"
-                    min="0"
-                    step="0.01"
-                    value={minBid}
-                    onChange={(e) => setMinBid(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-black border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-amber-500/50 transition-colors placeholder-neutral-800"
+                    min={1}
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(e.target.value)}
+                    className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
                   />
                 </Field>
+
+                <Field
+                  label="Cooldown"
+                  icon={<Activity className="w-4 h-4" />}
+                  suffix="MIN"
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    value={cooldownMinutes}
+                    onChange={(e) => setCooldownMinutes(e.target.value)}
+                    className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
+                  />
+                </Field>
+
+                <Field
+                  label="Top_K_Rank"
+                  icon={<Trophy className="w-4 h-4" />}
+                  suffix="SLOTS"
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    max={255}
+                    value={isAuction ? '1' : topK}
+                    disabled={isAuction}
+                    onChange={(e) => setTopK(e.target.value)}
+                    className="w-full bg-surface-overlay/50 border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors disabled:opacity-30"
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label="Identity_Verification"
+                icon={<ShieldCheck className="w-4 h-4" />}
+              >
+                <div className="bg-surface-overlay/50 border border-indigo-500/10 p-4">
+                  <ReclaimVerifier
+                    onVerified={(proofId) => setReclaimProofId(proofId)}
+                    onCleared={() => setReclaimProofId('')}
+                  />
+                  {reclaimProofId && (
+                    <p className="mt-4 text-[9px] text-indigo-500/60 font-mono uppercase tracking-widest break-all">
+                      PROV_ID: {reclaimProofId}
+                    </p>
+                  )}
+                </div>
+              </Field>
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-mono uppercase">
+                  ERROR: {error}
+                </div>
               )}
-            </div>
 
-            <div className="grid md:grid-cols-3 gap-10">
-              <Field
-                label="Duration"
-                icon={<Clock className="w-4 h-4" />}
-                suffix="MIN"
+              <button
+                onClick={handleCreate}
+                disabled={isSubmitting}
+                className="w-full py-5 bg-indigo-500 text-black font-black uppercase tracking-tighter hover:bg-indigo-400 disabled:bg-indigo-500/20 disabled:text-indigo-500/40 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all text-lg hover-glow"
               >
-                <input
-                  type="number"
-                  min={1}
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(e.target.value)}
-                  className="w-full bg-black border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-              </Field>
-
-              <Field
-                label="Cooldown"
-                icon={<Activity className="w-4 h-4" />}
-                suffix="MIN"
-              >
-                <input
-                  type="number"
-                  min={1}
-                  value={cooldownMinutes}
-                  onChange={(e) => setCooldownMinutes(e.target.value)}
-                  className="w-full bg-black border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
-                />
-              </Field>
-
-              <Field
-                label="Top_K_Rank"
-                icon={<Trophy className="w-4 h-4" />}
-                suffix="SLOTS"
-              >
-                <input
-                  type="number"
-                  min={1}
-                  max={255}
-                  value={isAuction ? '1' : topK}
-                  disabled={isAuction}
-                  onChange={(e) => setTopK(e.target.value)}
-                  className="w-full bg-black border border-indigo-500/10 py-3 px-4 text-white font-mono text-sm focus:outline-none focus:border-indigo-500/50 transition-colors disabled:opacity-30"
-                />
-              </Field>
-            </div>
-
-            <Field
-              label="Identity_Verification"
-              icon={<ShieldCheck className="w-4 h-4" />}
-            >
-              <div className="bg-black border border-indigo-500/10 p-4">
-                <ReclaimVerifier
-                  onVerified={(proofId) => setReclaimProofId(proofId)}
-                  onCleared={() => setReclaimProofId('')}
-                />
-                {reclaimProofId && (
-                  <p className="mt-4 text-[9px] text-indigo-500/60 font-mono uppercase tracking-widest break-all">
-                    PROV_ID: {reclaimProofId}
-                  </p>
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-black/40 border-t-black rounded-full animate-spin" />
+                    INITIALIZING...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-6 h-6" /> Initialize Campaign
+                  </>
                 )}
-              </div>
-            </Field>
-
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-mono uppercase">
-                ERROR: {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleCreate}
-              disabled={isSubmitting}
-              className="w-full py-5 bg-indigo-500 text-black font-black uppercase tracking-tighter hover:bg-indigo-400 disabled:bg-indigo-500/20 disabled:text-indigo-500/40 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors text-lg"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                  INITIALIZING...
-                </>
-              ) : (
-                <>
-                  <Rocket className="w-6 h-6" /> Initialize Campaign
-                </>
-              )}
-            </button>
-          </div>
-        </motion.div>
+              </button>
+            </div>
+          </motion.div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function BackgroundAnimation() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.1, 0.2, 0.1],
+          x: [-200, 200, -200],
+          y: [-100, 100, -100],
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px]"
+      />
+      <motion.div
+        animate={{
+          scale: [1.2, 1, 1.2],
+          opacity: [0.1, 0.15, 0.1],
+          x: [200, -200, 200],
+          y: [100, -100, 100],
+        }}
+        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+        className="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[120px]"
+      />
+      <div className="absolute inset-0 bg-grid-small opacity-10" />
     </div>
   );
 }

@@ -437,7 +437,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black selection:bg-blue-500/30 text-neutral-200">
+    <div className="min-h-screen bg-surface-base selection:bg-blue-500/30 text-neutral-200">
       <InfiniteDataStream text="[NOX_DASHBOARD_ACTIVE] —— REAL_TIME_TEE_MONITOR —— ENCRYPTED_VAULT_SYNCHRONIZED —— " color="blue" />
       
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
@@ -451,8 +451,6 @@ export default function Dashboard() {
             <LayoutDashboard className="w-4 h-4" />
             <span>Confidential Dashboard</span>
           </div>
-          {/* <h1 className="text-6xl font-black tracking-tighter text-white uppercase mb-2">My <span className="text-blue-500">Node.</span></h1> */}
-          {/* <p className="text-neutral-500 font-mono text-sm uppercase">Manage your confidential funds and track your active campaigns.</p> */}
         </motion.div>
 
         <div className="grid lg:grid-cols-12 gap-12">
@@ -460,7 +458,7 @@ export default function Dashboard() {
           <div className="lg:col-span-4 space-y-8">
             <motion.div 
               {...fadeInUp}
-              className="bg-[#050505] border border-blue-500/20 p-8 relative overflow-hidden group"
+              className="bg-surface-raised border border-border-strong p-8 relative overflow-hidden group"
             >
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Database className="w-16 h-16 text-blue-500" />
@@ -479,7 +477,7 @@ export default function Dashboard() {
                 <div className="text-blue-500/40"><Activity className="w-5 h-5" /></div>
               </div>
 
-              <div className="h-px w-full bg-blue-500/10 mb-8" />
+              <div className="h-px w-full bg-border-subtle mb-8" />
 
               {/* Confidential FUNDME */}
               <div className="flex justify-between items-end">
@@ -494,7 +492,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => isRevealed ? setIsRevealed(false) : handleRevealBalance()}
                   disabled={isLoadingNox}
-                  className="w-12 h-12 border border-blue-500/30 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors"
+                  className="w-12 h-12 border border-border-strong flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors bg-surface-overlay"
                 >
                   {isLoadingNox ? <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : (isRevealed ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />)}
                 </button>
@@ -504,9 +502,9 @@ export default function Dashboard() {
             <motion.div 
               {...fadeInUp}
               transition={{ delay: 0.1 }}
-              className="bg-[#050505] border border-blue-500/20 p-1"
+              className="bg-surface-raised border border-border-strong p-1"
             >
-              <div className="flex bg-black p-1 mb-1">
+              <div className="flex bg-surface-overlay p-1 mb-1">
                 <button 
                   onClick={() => setActiveTab('deposit')} 
                   className={`flex-1 py-3 text-[10px] font-mono font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${activeTab === 'deposit' ? 'bg-blue-500 text-black' : 'text-neutral-500 hover:text-white'}`}
@@ -530,7 +528,7 @@ export default function Dashboard() {
                       value={amount} 
                       onChange={(e) => setAmount(e.target.value)} 
                       placeholder="0.00" 
-                      className="w-full bg-black border border-blue-500/10 py-4 px-4 text-white font-mono text-xl focus:outline-none focus:border-blue-500/50 transition-colors placeholder-neutral-800"
+                      className="w-full bg-surface-overlay border border-border-subtle py-4 px-4 text-white font-mono text-xl focus:outline-none focus:border-blue-500/50 transition-colors placeholder-neutral-800"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono text-blue-500/40 font-black uppercase">
                       {activeTab === 'deposit' ? 'USDC' : 'FME'}
@@ -570,14 +568,14 @@ export default function Dashboard() {
              {/* Created Projects */}
              <motion.div 
                {...fadeInUp}
-               className="bg-[#050505] border border-blue-500/20 p-8 relative"
+               className="bg-surface-raised border border-border-strong p-8 relative"
              >
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h3 className="text-xs font-mono text-blue-500 mb-2 uppercase tracking-[0.4em]">My Campaigns</h3>
                     <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Project_Initiations.</h2>
                   </div>
-                  <Link href="/create" className="w-10 h-10 border border-blue-500/30 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors">
+                  <Link href="/create" className="w-10 h-10 border border-border-strong flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors bg-surface-overlay">
                     <PlusCircle className="w-5 h-5" />
                   </Link>
                 </div>
@@ -585,11 +583,11 @@ export default function Dashboard() {
                 {isLoadingProjects ? (
                   <div className="text-center py-20 font-mono text-blue-500/40 uppercase animate-pulse">Scanning_Network...</div>
                 ) : myCreatedProjects.length === 0 ? (
-                  <div className="text-center py-20 border border-dashed border-blue-500/10 text-neutral-600 font-mono text-xs uppercase">No active campaigns detected in enclave.</div>
+                  <div className="text-center py-20 border border-dashed border-border-subtle text-neutral-600 font-mono text-xs uppercase">No active campaigns detected in enclave.</div>
                 ) : (
                   <div className="space-y-4">
                     {myCreatedProjects.map(p => (
-                      <div key={p.id} className="p-6 border border-blue-500/10 hover:border-blue-500/30 transition-colors bg-black flex justify-between items-center gap-6 group">
+                      <div key={p.id} className="p-6 border border-border-subtle hover:border-border-strong transition-colors bg-surface-overlay flex justify-between items-center gap-6 group">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-2">
                              <span className="text-[10px] font-mono text-blue-500/40">ID:{p.id.toString().padStart(4, '0')}</span>
@@ -613,7 +611,7 @@ export default function Dashboard() {
                              </span>
                           </div>
                         </div>
-                        <Link href={`/project/${p.id}`} className="px-6 py-3 border border-blue-500/20 text-blue-500 font-mono text-[10px] font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-black transition-colors whitespace-nowrap">
+                        <Link href={`/project/${p.id}`} className="px-6 py-3 border border-border-strong text-blue-500 font-mono text-[10px] font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-black transition-colors whitespace-nowrap bg-surface-base">
                           View
                         </Link>
                       </div>
@@ -626,7 +624,7 @@ export default function Dashboard() {
              <motion.div 
                {...fadeInUp}
                transition={{ delay: 0.2 }}
-               className="bg-[#050505] border border-blue-500/20 p-8"
+               className="bg-surface-raised border border-border-strong p-8"
              >
                 <div className="mb-8">
                   <h3 className="text-xs font-mono text-blue-500 mb-2 uppercase tracking-[0.4em]">Active Sponsorships</h3>
@@ -636,13 +634,13 @@ export default function Dashboard() {
                 {isLoadingProjects ? (
                   <div className="text-center py-20 font-mono text-blue-500/40 uppercase animate-pulse">Decrypting_Logs...</div>
                 ) : mySponsoredProjects.length === 0 ? (
-                  <div className="text-center py-20 border border-dashed border-blue-500/10 text-neutral-600 font-mono text-xs uppercase">No sponsorship data available.</div>
+                  <div className="text-center py-20 border border-dashed border-border-subtle text-neutral-600 font-mono text-xs uppercase">No sponsorship data available.</div>
                 ) : (
                   <div className="space-y-4">
                     {mySponsoredProjects.map(p => (
-                      <div key={p.id} className="p-6 border border-blue-500/10 bg-black flex justify-between items-center group">
+                      <div key={p.id} className="p-6 border border-border-subtle bg-surface-overlay flex justify-between items-center group">
                         <div className="flex items-center gap-6 flex-1 min-w-0">
-                          <div className="w-12 h-12 border border-blue-500/10 flex items-center justify-center font-black text-blue-500/30 font-mono text-sm shrink-0">
+                          <div className="w-12 h-12 border border-border-subtle flex items-center justify-center font-black text-blue-500/30 font-mono text-sm shrink-0">
                             #{p.id}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -674,7 +672,7 @@ export default function Dashboard() {
                             </div>
                           </div>
                         </div>
-                        <Link href={`/project/${p.id}`} className="w-10 h-10 border border-blue-500/10 flex items-center justify-center text-blue-500/40 hover:text-blue-500 hover:border-blue-500/30 transition-all">
+                        <Link href={`/project/${p.id}`} className="w-10 h-10 border border-border-subtle flex items-center justify-center text-blue-500/40 hover:text-blue-500 hover:border-border-strong transition-all">
                           <ChevronRight className="w-5 h-5" />
                         </Link>
                       </div>

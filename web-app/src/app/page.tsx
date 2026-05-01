@@ -39,12 +39,12 @@ export default function LandingPage() {
   if (!mounted) return <div className="min-h-screen bg-black" />;
 
   return (
-    <div className="min-h-screen bg-[#000000] selection:bg-blue-500/30 overflow-x-hidden text-neutral-200">
+    <div className="min-h-screen bg-surface-base selection:bg-blue-500/30 overflow-x-hidden text-neutral-200">
       {/* NOX DATA STREAM MARQUEE (The Technical Backbone) */}
       <InfiniteDataStream text="[NOX_ENCLAVE_ACTIVE] —— ENCRYPTED_CONTRIBUTION_STREAM —— TEE_ATTESTATION_STATUS:OK —— 0x7984_COMPLIANT —— " color="blue" />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-32 border-b border-blue-500/20">
+      <section className="relative pt-24 pb-32 border-b border-border-strong">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#1e3a8a_0%,#000000_60%)] opacity-40" />
         
         <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -114,7 +114,7 @@ export default function LandingPage() {
       </section>
 
       {/* Campaign Modes - Content from README */}
-      <section className="py-24 border-b border-blue-500/20 bg-[#050505]">
+      <section className="py-24 border-b border-border-strong bg-surface-raised">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div 
             {...fadeInUp}
@@ -136,7 +136,8 @@ export default function LandingPage() {
           >
             <motion.div 
               variants={itemReveal}
-              className="border border-blue-500/20 p-10 group hover:border-blue-500 transition-colors bg-black"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="border border-border-strong p-10 group transition-colors bg-surface-overlay hover:bg-surface-hover hover-glow"
             >
                <div className="flex justify-between items-start mb-12">
                   <div className="w-12 h-12 border border-blue-500/30 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-black transition-colors">
@@ -148,7 +149,7 @@ export default function LandingPage() {
                <p className="text-neutral-400 font-mono text-sm leading-tight uppercase mb-8">
                  TOP-K SPONSORS WIN. CREATORS COLLECT POOLED CONTRIBUTIONS. IDEAL FOR PROJECTS WITH TIERS OR REWARDS.
                </p>
-               <div className="pt-6 border-t border-blue-500/10 flex items-center gap-2 text-blue-500 text-xs font-mono uppercase">
+               <div className="pt-6 border-t border-border-subtle flex items-center gap-2 text-blue-500 text-xs font-mono uppercase">
                   <Activity className="w-3 h-3 animate-pulse" />
                   <span>Leaderboard refreshed via TEE</span>
                </div>
@@ -156,7 +157,8 @@ export default function LandingPage() {
 
             <motion.div 
               variants={itemReveal}
-              className="border border-blue-600/20 p-10 group hover:border-blue-600 transition-colors bg-black"
+              whileHover={{ y: -8, scale: 1.02 }}
+              className="border border-blue-600/20 p-10 group transition-colors bg-surface-overlay hover:bg-surface-hover hover-glow"
             >
                <div className="flex justify-between items-start mb-12">
                   <div className="w-12 h-12 border border-blue-600/30 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-black transition-colors">
@@ -168,7 +170,7 @@ export default function LandingPage() {
                <p className="text-neutral-400 font-mono text-sm leading-tight uppercase mb-8">
                  HIGHEST SINGLE BIDDER WINS. ALL OTHERS RECEIVE AUTOMATIC REFUNDS. PERFECT FOR EXCLUSIVE OPPORTUNITIES.
                </p>
-               <div className="pt-6 border-t border-blue-600/10 flex items-center gap-2 text-blue-600 text-xs font-mono uppercase">
+               <div className="pt-6 border-t border-border-subtle flex items-center gap-2 text-blue-600 text-xs font-mono uppercase">
                   <Activity className="w-3 h-3 animate-pulse" />
                   <span>Winner calculated in Enclave</span>
                </div>
@@ -178,36 +180,54 @@ export default function LandingPage() {
       </section>
 
       {/* NOX ENCLAVE VISUALIZER (Positioned as the Engine) */}
-      <section className="py-32 relative overflow-hidden">
+      <section className="py-32 relative overflow-hidden bg-grid-small">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col lg:flex-row gap-20 items-center">
             <motion.div 
               {...fadeInUp}
               className="lg:w-1/2"
             >
-              <h2 className="text-xs font-mono text-blue-500 mb-6 uppercase tracking-[0.5em]">The Nox Backbone</h2>
-              <h3 className="text-5xl font-black text-white tracking-tighter mb-8 leading-none uppercase">
-                Privacy By <br />
-                <span className="text-neutral-600">Infrastructure.</span>
-              </h3>
+              <div className="flex items-center gap-6 mb-8">
+                <div className="relative">
+                  <div className="absolute -inset-2 bg-blue-500/20 blur-xl rounded-full" />
+                  <Image 
+                    src={iexecLogo} 
+                    alt="iExec Nox" 
+                    width={56} 
+                    height={56} 
+                    className="relative z-10" 
+                  />
+                </div>
+                <div>
+                  <h2 className="text-xs font-mono text-blue-500 mb-1 uppercase tracking-[0.5em]">The Nox Protocol</h2>
+                  <h3 className="text-5xl font-black text-white tracking-tighter leading-none uppercase">
+                    Privacy By <br />
+                    <span className="text-neutral-600">Infrastructure.</span>
+                  </h3>
+                </div>
+              </div>
+              
               <p className="text-lg text-neutral-400 font-mono mb-10 leading-tight">
-                FUNDME LIVES ON ARBITRUM, BUT ITS BRAIN LIVES IN THE ENCLAVE. ONLY THE NOX CAN DECRYPT AND RANK SPONSORS WITHOUT EXPOSING RAW DATA IN TEE.
+                FUNDME LIVES ON ARBITRUM, BUT THE COMPUTATION LIVES IN THE SECURE ENCLAVE. <br />
+                <span className="text-white">NO FHE LATENCY. PURE TEE SECURITY.</span> ONLY THE NOX PROTOCOL CAN DECRYPT AND RANK SPONSORS WITHIN HARDWARE-LEVEL ISOLATION.
               </p>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <motion.div 
                   whileHover={{ scale: 1.02 }}
-                  className="p-4 border border-blue-500/20 bg-blue-500/5"
+                  className="p-5 border border-border-strong bg-blue-500/5 relative group"
                 >
-                  <div className="text-blue-500 mb-2"><Activity className="w-5 h-5" /></div>
-                  <span className="font-mono text-[10px] tracking-tighter text-white uppercase">Real-time TEE Attestation</span>
+                  <div className="text-blue-500 mb-3"><Activity className="w-6 h-6" /></div>
+                  <span className="font-mono text-xs tracking-tighter text-white uppercase block mb-1">Hardware Enclave</span>
+                  <p className="text-[10px] text-neutral-500 uppercase font-mono leading-tight">TEE-based decryption ensures data never touches the OS or memory.</p>
                 </motion.div>
                 <motion.div 
                   whileHover={{ scale: 1.02 }}
-                  className="p-4 border border-blue-600/20 bg-blue-600/5"
+                  className="p-5 border border-border-strong bg-blue-600/5 relative group"
                 >
-                  <div className="text-blue-600 mb-2"><Shield className="w-5 h-5" /></div>
-                  <span className="font-mono text-[10px] tracking-tighter text-white uppercase">ZK-Identity via Reclaim</span>
+                  <div className="text-blue-600 mb-3"><Shield className="w-6 h-6" /></div>
+                  <span className="font-mono text-xs tracking-tighter text-white uppercase block mb-1">Nox Attestation</span>
+                  <p className="text-[10px] text-neutral-500 uppercase font-mono leading-tight">Cryptographic proof that code is running in a genuine iExec Enclave.</p>
                 </motion.div>
               </div>
             </motion.div>
@@ -219,29 +239,39 @@ export default function LandingPage() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="lg:w-1/2 w-full"
             >
-              <div className="bg-[#050505] border-2 border-blue-500/30 p-1 font-mono group">
-                <div className="bg-blue-500/10 p-4 border border-blue-500/20 mb-1 flex justify-between">
-                  <span className="text-blue-500 uppercase text-[10px]">Backbone_Terminal // Nox_Core</span>
-                  <div className="flex gap-2">
-                    <div className="w-2 h-2 bg-blue-500/50 rounded-full animate-ping" />
+              <div className="bg-surface-overlay border-2 border-border-strong p-1 font-mono group relative shadow-2xl shadow-blue-500/5">
+                <div className="bg-blue-500/10 p-4 border border-border-subtle mb-1 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="text-blue-500 uppercase text-[10px] font-bold">Backbone_Terminal // Nox_Core_TEE</span>
                   </div>
+                  <span className="text-[9px] text-blue-500/40 tracking-widest">v0.7984-STABLE</span>
                 </div>
                 <div className="p-8 space-y-6 text-sm">
                   <div className="flex items-start gap-4">
                     <span className="text-neutral-600">$</span>
-                    <span className="text-white animate-pulse">fundme --init-reveal-0x9A4F</span>
+                    <span className="text-white animate-pulse">fundme --init-tee-reveal-0x9A4F</span>
                   </div>
-                  <div className="space-y-2 border-l-2 border-blue-500/30 pl-4">
-                    <p className="text-blue-500/70 text-xs">{">"} fetching_encrypted_handles...</p>
-                    <p className="text-blue-500/70 text-xs">{">"} decrypting_inside_tee_enclave...</p>
-                    <p className="text-blue-500/70 text-xs">{">"} sorting_by_homomorphic_weight...</p>
+                  <div className="space-y-3 border-l-2 border-blue-500/30 pl-4">
+                    <p className="text-blue-500/70 text-xs flex items-center gap-2">
+                      <span className="w-1 h-1 bg-blue-500 rounded-full" />
+                      fetching_encrypted_handles... [DONE]
+                    </p>
+                    <p className="text-blue-500/70 text-xs flex items-center gap-2">
+                      <span className="w-1 h-1 bg-blue-500 rounded-full" />
+                      provisioning_tee_enclave_secrets... [OK]
+                    </p>
+                    <p className="text-blue-500/70 text-xs flex items-center gap-2 font-bold text-white">
+                      <span className="w-1 h-1 bg-white rounded-full animate-ping" />
+                      ranking_inside_hardware_boundary...
+                    </p>
                   </div>
-                  <div className="p-4 bg-blue-500/10 text-blue-400 font-bold border border-blue-500/20 text-center uppercase tracking-tighter group-hover:bg-blue-500/20 transition-colors">
-                     Reveal_State: Synchronized_To_IPFS
+                  <div className="p-4 bg-blue-500/10 text-blue-400 font-bold border border-blue-500/30 text-center uppercase tracking-tighter group-hover:bg-blue-500/20 transition-colors">
+                     Enclave_State: Synchronized_To_IPFS
                   </div>
-                  <div className="flex justify-between items-center text-[9px] text-neutral-600 uppercase">
-                    <span>Sig: 0x9f...4a2</span>
-                    <span>Lat: 124ms</span>
+                  <div className="flex justify-between items-center text-[9px] text-neutral-600 uppercase pt-2">
+                    <span className="flex items-center gap-1"><Cpu className="w-2.5 h-2.5" /> Hardware: iExec_Worker_01</span>
+                    <span>Lat: 42ms</span>
                   </div>
                 </div>
               </div>
@@ -254,7 +284,7 @@ export default function LandingPage() {
       <InfiniteDataStream text="TEE_VERIFIED —— NOX_PROTOCOL —— ZERO_KNOWLEDGE_PROOFS —— END_TO_END_ENCRYPTION —— " color="indigo" />
 
       {/* TECH PARTNERS */}
-      <section className="py-24 border-y border-blue-500/10 bg-black overflow-hidden">
+      <section className="py-24 border-y border-border-subtle bg-surface-base overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div 
             variants={staggerContainer}

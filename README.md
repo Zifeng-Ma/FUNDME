@@ -8,7 +8,7 @@
 
 ## Overview
 
-FUNDME is a confidential crowdfunding platform built on **Arbitrum Sepolia**. Contribution amounts are encrypted on-chain using [iExec NOX](https://docs.iex.ec/) (Fully Homomorphic Encryption), so no one — not even the contract — can see how much you contributed. Rankings are computed off-chain inside a **Trusted Execution Environment (TEE)** oracle, then published to IPFS for permanent, verifiable history.
+FUNDME is a confidential crowdfunding platform built on **Arbitrum Sepolia**. Contribution amounts are encrypted on-chain using [iExec NOX](https://docs.iex.ec/) (Trusted Execution Environment), so no one — not even the contract — can see how much you contributed. Rankings are computed off-chain inside a **Trusted Execution Environment (TEE)** oracle, then published to IPFS for permanent, verifiable history.
 
 **[Try it live →](https://fundme-2026.vercel.app/)**
 

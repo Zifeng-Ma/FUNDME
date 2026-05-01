@@ -73,61 +73,66 @@ function ProjectCard({ project }: { project: ProjectData }) {
     <motion.div variants={fadeInUp}>
       <Link
         href={`/project/${project.id}`}
-        className="group block relative bg-[#050505] border border-blue-500/10 p-0 hover:border-blue-500/40 transition-all overflow-hidden"
+        className="group block relative bg-surface-raised border border-border-strong p-0 hover:bg-surface-hover hover-glow transition-all overflow-hidden"
       >
-        <div className="bg-black border-b border-blue-500/10 p-3 flex justify-between items-center">
-          <span className="font-mono text-[10px] text-blue-500/40 uppercase tracking-widest">Project_ID: {project.id.toString().padStart(4, '0')}</span>
-          <div className="flex gap-2">
-            {project.isAuction && (
-              <span className="font-mono text-[9px] text-amber-500 bg-amber-500/10 px-2 py-0.5 border border-amber-500/20 uppercase">Auction</span>
-            )}
-            {project.isFinalized ? (
-              <span className="font-mono text-[9px] text-green-500 bg-green-500/10 px-2 py-0.5 border border-green-500/20 uppercase">Finalized</span>
-            ) : ended ? (
-              <span className="font-mono text-[9px] text-amber-400 bg-amber-400/10 px-2 py-0.5 border border-amber-400/20 uppercase">Decrypting</span>
-            ) : (
-              <span className="font-mono text-[9px] text-blue-400 bg-blue-400/10 px-2 py-0.5 border border-blue-400/20 uppercase animate-pulse">Live</span>
-            )}
-          </div>
-        </div>
-
-        <div className="p-8">
-          <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-4 group-hover:text-blue-500 transition-colors">
-            {project.title || `Campaign_${project.id}`}
-          </h3>
-
-          <div className="mb-6 h-12">
-            {project.description && (
-              <p className="text-xs text-neutral-500 font-mono uppercase line-clamp-2 leading-tight">
-                {project.description}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 mb-8">
-            <VerifiedBadge reclaimProofId={project.reclaimProofId} useSpan={true} />
-            <span className="text-[10px] text-neutral-600 font-mono uppercase">
-              By <AddressLink address={project.sponsoree} shorten={true} useSpan={true} />
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 border-t border-blue-500/10">
-            <div className="p-4 border-r border-blue-500/10">
-              <p className="text-[9px] font-mono text-neutral-600 uppercase mb-1">Status</p>
-              <p className="font-mono text-[10px] text-white font-bold">{mounted ? deadlineLabel : 'LOADING...'}</p>
-            </div>
-            <div className="p-4">
-              <p className="text-[9px] font-mono text-neutral-600 uppercase mb-1 flex items-center gap-1">
-                <Trophy className="w-2.5 h-2.5" /> Top_K
-              </p>
-              <p className="font-mono text-[10px] text-blue-500 font-bold">{project.topK}_SPONSORS</p>
+        <motion.div 
+          whileHover={{ y: -4 }}
+          className="h-full"
+        >
+          <div className="bg-surface-overlay border-b border-border-subtle p-3 flex justify-between items-center">
+            <span className="font-mono text-[10px] text-blue-500/40 uppercase tracking-widest">Project_ID: {project.id.toString().padStart(4, '0')}</span>
+            <div className="flex gap-2">
+              {project.isAuction && (
+                <span className="font-mono text-[9px] text-amber-500 bg-amber-500/10 px-2 py-0.5 border border-amber-500/20 uppercase">Auction</span>
+              )}
+              {project.isFinalized ? (
+                <span className="font-mono text-[9px] text-green-500 bg-green-500/10 px-2 py-0.5 border border-green-500/20 uppercase">Finalized</span>
+              ) : ended ? (
+                <span className="font-mono text-[9px] text-amber-400 bg-amber-400/10 px-2 py-0.5 border border-amber-400/20 uppercase">Decrypting</span>
+              ) : (
+                <span className="font-mono text-[9px] text-blue-400 bg-blue-400/10 px-2 py-0.5 border border-blue-400/20 uppercase animate-pulse">Live</span>
+              )}
             </div>
           </div>
-        </div>
-        
-        <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-           <ChevronRight className="w-4 h-4 text-blue-500" />
-        </div>
+
+          <div className="p-8">
+            <h3 className="text-2xl font-black text-white tracking-tighter uppercase mb-4 group-hover:text-blue-500 transition-colors">
+              {project.title || `Campaign_${project.id}`}
+            </h3>
+
+            <div className="mb-6 h-12">
+              {project.description && (
+                <p className="text-xs text-neutral-500 font-mono uppercase line-clamp-2 leading-tight">
+                  {project.description}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 mb-8">
+              <VerifiedBadge reclaimProofId={project.reclaimProofId} useSpan={true} />
+              <span className="text-[10px] text-neutral-600 font-mono uppercase">
+                By <AddressLink address={project.sponsoree} shorten={true} useSpan={true} />
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 border-t border-border-subtle">
+              <div className="p-4 border-r border-border-subtle">
+                <p className="text-[9px] font-mono text-neutral-600 uppercase mb-1">Status</p>
+                <p className="font-mono text-[10px] text-white font-bold">{mounted ? deadlineLabel : 'LOADING...'}</p>
+              </div>
+              <div className="p-4">
+                <p className="text-[9px] font-mono text-neutral-600 uppercase mb-1 flex items-center gap-1">
+                  <Trophy className="w-2.5 h-2.5" /> Top_K
+                </p>
+                <p className="font-mono text-[10px] text-blue-500 font-bold">{project.topK}_SPONSORS</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+             <ChevronRight className="w-4 h-4 text-blue-500" />
+          </div>
+        </motion.div>
       </Link>
     </motion.div>
   );
@@ -221,7 +226,7 @@ export default function ProjectsPage() {
   }, [nextProjectId, publicClient]);
 
   return (
-    <div className="min-h-screen bg-black text-neutral-200">
+    <div className="min-h-screen bg-surface-base text-neutral-200">
       <InfiniteDataStream text="[EXPLORE_NETWORK] —— ACTIVE_CAMPAIGNS_STREAM —— CONFIDENTIAL_LEADERBOARDS_ACTIVE —— " color="blue" />
       
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
@@ -260,8 +265,8 @@ export default function ProjectsPage() {
         {isLoading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="bg-[#050505] border border-blue-500/10 h-[400px] animate-pulse flex flex-col">
-                <div className="h-10 bg-black border-b border-blue-500/10" />
+              <div key={i} className="bg-surface-raised border border-border-strong h-[400px] animate-pulse flex flex-col">
+                <div className="h-10 bg-surface-overlay border-b border-border-subtle" />
                 <div className="p-8 space-y-4">
                    <div className="h-8 bg-blue-500/5 w-3/4" />
                    <div className="h-4 bg-blue-500/5 w-full" />
@@ -273,7 +278,7 @@ export default function ProjectsPage() {
         ) : projects.length === 0 ? (
           <motion.div 
             {...fadeInUp}
-            className="text-center py-32 border border-dashed border-blue-500/10 bg-[#050505]"
+            className="text-center py-32 border border-dashed border-border-strong bg-surface-raised"
           >
             <Activity className="w-16 h-16 mx-auto mb-6 text-blue-500/20" />
             <h3 className="text-xl font-black text-white uppercase tracking-widest mb-2">No active projects detected</h3>
