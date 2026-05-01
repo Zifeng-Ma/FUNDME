@@ -32,7 +32,7 @@ const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
-};
+} as const;
 
 type CreatedProject = { id: number; deadline: bigint; topK: number; finalized: boolean; title: string; description: string; sponsorCount: number; totalFunded?: string; highestBid?: string; isAuction: boolean };
 type SponsoredProject = { id: number; title?: string; deadline?: bigint; finalized?: boolean; contributionHandle?: `0x${string}`; isAuction?: boolean };
