@@ -7,9 +7,6 @@ type Props = {
   useSpan?: boolean;
 };
 
-// Parses the stored proof string.
-// New format: "@handle|proofId"  →  returns the handle
-// Old format: any non-empty string without "|"  →  returns null (just "Verified")
 function parseTwitterHandle(value: string): string | null {
   if (!value) return null;
   if (!value.startsWith('@')) return null;
@@ -22,8 +19,8 @@ function parseTwitterHandle(value: string): string | null {
 export function VerifiedBadge({ reclaimProofId, useSpan = false }: Props) {
   if (!reclaimProofId) {
     return (
-      <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-800/60 border border-neutral-700/40 text-neutral-500 text-xs font-medium">
-        <ShieldCheck className="w-3 h-3" /> Unverified
+      <span className="flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-neutral-800 text-neutral-600 font-mono text-[9px] uppercase font-black tracking-widest">
+        <ShieldCheck className="w-2.5 h-2.5" /> Unverified
       </span>
     );
   }
@@ -32,7 +29,7 @@ export function VerifiedBadge({ reclaimProofId, useSpan = false }: Props) {
 
   if (handle) {
     const url = `https://x.com/${handle}`;
-    const className = "flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors";
+    const className = "flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/30 text-green-500 font-mono text-[9px] uppercase font-black tracking-widest hover:bg-green-500/20 transition-colors";
 
     if (useSpan) {
       return (
@@ -45,7 +42,7 @@ export function VerifiedBadge({ reclaimProofId, useSpan = false }: Props) {
             window.open(url, '_blank', 'noopener,noreferrer');
           }}
         >
-          <ShieldCheck className="w-3 h-3" />
+          <ShieldCheck className="w-2.5 h-2.5" />
           @{handle}
         </span>
       );
@@ -59,15 +56,15 @@ export function VerifiedBadge({ reclaimProofId, useSpan = false }: Props) {
         className={className}
         onClick={(e) => e.stopPropagation()}
       >
-        <ShieldCheck className="w-3 h-3" />
+        <ShieldCheck className="w-2.5 h-2.5" />
         @{handle}
       </a>
     );
   }
 
   return (
-    <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-      <ShieldCheck className="w-3 h-3" /> Verified
+    <span className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/30 text-green-500 font-mono text-[9px] uppercase font-black tracking-widest">
+      <ShieldCheck className="w-2.5 h-2.5" /> Verified
     </span>
   );
 }

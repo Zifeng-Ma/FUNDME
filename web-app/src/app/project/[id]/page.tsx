@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   Clock,
   Crown,
-  Flame,
   Lock,
   Download,
   RefreshCw,
@@ -24,7 +23,13 @@ import {
   Trophy,
   Upload,
   Zap,
+  Activity,
+  Terminal,
+  Cpu,
+  ChevronRight,
+  Eye
 } from 'lucide-react';
+import { motion } from "framer-motion";
 import {
   CHAIN_ID,
   FUNDME_PLATFORM_ADDRESS,
@@ -42,6 +47,13 @@ import { isUnderpricedGasError, isUserRejection } from '@/lib/errors';
 import { VerifiedBadge } from '@/components/VerifiedBadge';
 import { AddressLink } from '@/components/AddressLink';
 
+// Animation Variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+};
+
 // --- Helpers -------------------------------------------------------------
 
 function useCountdown(deadline?: bigint) {
@@ -52,12 +64,12 @@ function useCountdown(deadline?: bigint) {
   }, []);
   if (!deadline) return { ended: false, label: '—', totalSeconds: 0 };
   const diff = Number(deadline) - now;
-  if (diff <= 0) return { ended: true, label: 'Ended', totalSeconds: 0 };
+  if (diff <= 0) return { ended: true, label: 'ENDED', totalSeconds: 0 };
   const d = Math.floor(diff / 86400);
   const h = Math.floor((diff % 86400) / 3600);
   const m = Math.floor((diff % 3600) / 60);
   const s = diff % 60;
-  const label = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+  const label = d > 0 ? `${d}D ${h}H ${m}M` : h > 0 ? `${h}H ${m}M ${s}S` : `${m}M ${s}S`;
   return { ended: false, label, totalSeconds: diff };
 }
 
@@ -66,7 +78,6 @@ function useCountdown(deadline?: bigint) {
 export default function ProjectDetailPage({
   params,
 }: {
-  // Next.js 15+ / 16 passes params as a Promise in client components.
   params: Promise<{ id: string }>;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -109,7 +120,7 @@ export default function ProjectDetailPage({
     query: { enabled: isValidId },
   });
 
-const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
+  const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     address: FUNDME_TOKEN_ADDRESS,
     abi: WRAPPER_ABI,
     functionName: 'isOperator',
@@ -223,11 +234,9 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       return;
     }
 
-    // Mock hashes are written on-chain when the oracle runs without PINATA_JWT.
-    // They are not real IPFS CIDs — fetching them will always fail.
     if (latestLeaderboardHash.startsWith('QmMock')) {
       setLeaderboardFetchError(
-        'Oracle is running in mock mode (no Pinata JWT configured). Set PINATA_JWT in oracle/.env and restart the oracle.',
+        'Oracle is running in mock mode. Check oracle configuration.',
       );
       return;
     }
@@ -298,11 +307,9 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     setSponsorError(null);
     setSponsorSuccess(null);
     try {
-      // Step 1: authorize the platform as operator if not already done.
       if (!isOperator) {
         setSponsorStep('authorizing');
-        // setOperator takes uint48 (seconds) — safe since 2^48 s ≈ 8.9M years.
-        const untilSeconds = Number(project.deadline) + 60; // 1 min buffer
+        const untilSeconds = Number(project.deadline) + 60;
         const gasOverride = publicClient ? await getGasOverride(publicClient) : {};
         await writeContractAsync({
           address: FUNDME_TOKEN_ADDRESS,
@@ -313,16 +320,11 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
           ...gasOverride,
         });
         await refetchIsOperator();
-        // Give the wallet a moment before the next interaction.
         await new Promise((res) => setTimeout(res, 5_000));
       }
 
-      // Step 2: encrypt the amount and call sponsorProject.
       setSponsorStep('sponsoring');
       const valueInUnits = parseUnits(amount, USDC_DECIMALS);
-
-      // Encrypt the amount off-chain against the PLATFORM address, since that's
-      // the contract that will call Nox.fromExternal(...).
       const handleClient = await createViemHandleClient(walletClient as any);
       const { handle: encryptedAmount, handleProof: inputProof } =
         await handleClient.encryptInput(
@@ -346,53 +348,13 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
         ...gasOverride,
       });
 
-      // Wait for the receipt and verify the transaction didn't revert on-chain.
-      // writeContractAsync only throws if the tx is rejected by the node; an
-      // out-of-gas revert is still "accepted" and returns a hash, so we must
-      // check receipt.status ourselves.
       if (publicClient) {
         const receipt = await publicClient.waitForTransactionReceipt({ hash: sponsorTxHash });
         if (receipt.status === 'reverted') {
-          // Attempt to diagnose the revert reason by re-simulating the call.
-          // This catches require() messages emitted by the contract.
-          let revertMsg: string | null = null;
-          try {
-            await publicClient.simulateContract({
-              address: FUNDME_PLATFORM_ADDRESS,
-              abi: PLATFORM_ABI,
-              functionName: 'sponsorProject',
-              args: [
-                BigInt(projectId),
-                encryptedAmount as `0x${string}`,
-                inputProof as `0x${string}`,
-              ],
-              account: address,
-              gas: SPONSOR_GAS_LIMIT,
-            });
-          } catch (simErr) {
-            const raw = simErr instanceof Error ? simErr.message : String(simErr);
-            if (raw.includes('Funding campaign has ended')) {
-              revertMsg = 'This campaign has already ended — sponsorships are no longer accepted.';
-            } else if (raw.includes('Platform is not an operator')) {
-              revertMsg = 'Wallet authorization expired. Retry — you will be prompted to re-authorize.';
-            } else if (raw.includes('out of gas') || raw.includes('OutOfGas')) {
-              revertMsg = 'Transaction ran out of gas. Try again with a higher gas limit.';
-            }
-            // Other reverts (e.g. confidential transfer failure) fall through to the generic message below.
-          }
-          throw new Error(
-            revertMsg ??
-              'Transaction reverted. This usually means insufficient FUNDME balance, an expired authorization, or a closed campaign.',
-          );
+          throw new Error('Transaction reverted on-chain.');
         }
       }
 
-      if (typeof window !== 'undefined') {
-        const key = `fundme_sponsorship_${address}_${projectId}`;
-        const prev = parseFloat(localStorage.getItem(key) ?? '0');
-        const next = prev + parseFloat(amount);
-        localStorage.setItem(key, String(next));
-      }
       setAmount('');
       setSponsorSuccess(
         project.isAuction
@@ -403,12 +365,10 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       if (isUserRejection(err)) return;
       setSponsorError(
         isUnderpricedGasError(err)
-          ? "Base fee too high — retry with MetaMask's Aggressive gas setting."
+          ? "Base fee too high — retry with Aggressive gas setting."
           : err instanceof Error
             ? err.message.slice(0, 200)
-            : project.isAuction
-              ? 'Bid failed.'
-              : 'Sponsorship failed.',
+            : 'Sponsorship failed.',
       );
     } finally {
       setSponsorStep('idle');
@@ -427,7 +387,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     try {
       setIsRefreshing(true);
       const gasOverride = publicClient ? await getGasOverride(publicClient) : {};
-      const txHash = await writeContractAsync({
+      await writeContractAsync({
         address: FUNDME_PLATFORM_ADDRESS,
         abi: PLATFORM_ABI,
         functionName: 'requestLeaderboardRefresh',
@@ -437,9 +397,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       });
       await refetchProject();
 
-      // Poll for the oracle's fulfillLeaderboard response. The oracle picks up the
-      // RevealRequested event and calls fulfillLeaderboard asynchronously, so we
-      // can't just refetch once — we poll until the hash count grows or we timeout.
       const previousHashCount = (leaderboardHistory as readonly string[] | undefined)?.length ?? 0;
       setIsRefreshing(false);
       setAwaitingOracle(true);
@@ -449,7 +406,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       const startedAt = Date.now();
 
       const poll = async (): Promise<void> => {
-        // Bypass wagmi cache: read directly from chain, same pattern as dashboard's handleRevealBalance
         const freshHistory = publicClient
           ? await publicClient.readContract({
               address: FUNDME_PLATFORM_ADDRESS,
@@ -460,7 +416,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
           : [];
         const newCount = freshHistory.length;
         if (newCount > previousHashCount) {
-          // Sync all dependent reads so panels update without a manual page refresh.
           await Promise.all([
             refetchLeaderboard(),
             refetchProject(),
@@ -475,8 +430,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
         }
         if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
           setAwaitingOracle(false);
-          setRefreshError('Oracle has not responded yet. The leaderboard will appear once it does — try refreshing the page in a moment.');
-          // Still sync wagmi so any previously-published hashes become visible
+          setRefreshError('Oracle delay. Wait a few seconds.');
           await Promise.all([
             refetchLeaderboard(),
             refetchProject(),
@@ -497,11 +451,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       setAwaitingOracle(false);
       if (isUserRejection(err)) return;
       setRefreshError(
-        isUnderpricedGasError(err)
-          ? 'Base fee too high — retry with Aggressive gas.'
-          : err instanceof Error
-            ? err.message.slice(0, 200)
-            : 'Leaderboard refresh failed.',
+        isUnderpricedGasError(err) ? 'Base fee too high.' : 'Leaderboard refresh failed.',
       );
     } finally {
       setIsRefreshing(false);
@@ -509,12 +459,13 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     }
   };
 
-  const cooldownRemaining = useMemo(() => {
-    if (!project || !project.leaderboardCooldown) return 0;
-    const now = BigInt(Math.floor(Date.now() / 1000));
-    const next = project.lastRevealTimestamp + project.leaderboardCooldown;
-    return next > now ? Number(next - now) : 0;
-  }, [project]);
+  const cooldownDeadline = useMemo(() => {
+    if (!project || !project.leaderboardCooldown) return undefined;
+    return project.lastRevealTimestamp + project.leaderboardCooldown;
+  }, [project?.lastRevealTimestamp, project?.leaderboardCooldown]);
+
+  const cooldownCountdown = useCountdown(cooldownDeadline);
+  const cooldownRemaining = cooldownCountdown.totalSeconds;
 
   const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
   const winnerIsSet =
@@ -557,7 +508,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     try {
       setIsWithdrawing(true);
       const gasOverride = publicClient ? await getGasOverride(publicClient) : {};
-      const txHash = await writeContractAsync({
+      await writeContractAsync({
         address: FUNDME_PLATFORM_ADDRESS,
         abi: PLATFORM_ABI,
         functionName: 'withdrawProjectFunds',
@@ -565,10 +516,6 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
         chainId: CHAIN_ID,
         ...gasOverride,
       });
-      if (publicClient) {
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        if (receipt.status === 'reverted') throw new Error('Transaction reverted on-chain.');
-      }
       setWithdrawSuccess('Funds withdrawn to your wallet.');
       await Promise.all([
         refetchProject(),
@@ -578,9 +525,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
       ]);
     } catch (err) {
       if (isUserRejection(err)) return;
-      setWithdrawError(
-        err instanceof Error ? err.message.slice(0, 200) : 'Withdrawal failed.',
-      );
+      setWithdrawError('Withdrawal failed.');
     } finally {
       setIsWithdrawing(false);
     }
@@ -599,7 +544,7 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
     try {
       setIsClaimingRefund(true);
       const gasOverride = publicClient ? await getGasOverride(publicClient) : {};
-      const txHash = await writeContractAsync({
+      await writeContractAsync({
         address: FUNDME_PLATFORM_ADDRESS,
         abi: PLATFORM_ABI,
         functionName: 'claimRefund',
@@ -607,20 +552,14 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
         chainId: CHAIN_ID,
         ...gasOverride,
       });
-      if (publicClient) {
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        if (receipt.status === 'reverted') throw new Error('Transaction reverted on-chain.');
-      }
-      setClaimRefundSuccess('Refund claimed — your contribution has been returned.');
+      setClaimRefundSuccess('Refund claimed.');
       await Promise.all([
         refetchHasClaimed(),
         refetchIsTopKSponsor(),
       ]);
     } catch (err) {
       if (isUserRejection(err)) return;
-      setClaimRefundError(
-        err instanceof Error ? err.message.slice(0, 200) : 'Refund claim failed.',
-      );
+      setClaimRefundError('Refund claim failed.');
     } finally {
       setIsClaimingRefund(false);
     }
@@ -628,248 +567,251 @@ const { data: isOperator, refetch: refetchIsOperator } = useReadContract({
 
   // --- Render -----------------------------------------------------------
 
-  if (!mounted) return null;
+  if (!mounted) return <div className="min-h-screen bg-black" />;
 
   if (!isValidId) {
     return (
-      <div className="min-h-screen pt-12 pb-12 px-6 flex justify-center items-center">
-        <div className="text-center bg-neutral-900/50 p-12 rounded-3xl border border-neutral-800 max-w-md">
-          <h2 className="text-2xl font-bold mb-2">Invalid campaign id</h2>
-          <p className="text-neutral-400 mb-6 text-sm">
-            &quot;{id}&quot; doesn&apos;t look like a valid project number.
+      <div className="min-h-screen pt-24 px-6 flex justify-center items-center bg-black">
+        <motion.div 
+          {...fadeInUp}
+          className="text-center bg-[#050505] p-12 border border-blue-500/20 max-w-md"
+        >
+          <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-4">Invalid Node ID</h2>
+          <p className="text-neutral-500 font-mono text-xs uppercase mb-8">
+            Node_{id} is not registered on-chain.
           </p>
           <Link
             href="/projects"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white text-black text-sm font-semibold"
+            className="inline-flex items-center gap-2 px-8 py-4 border border-blue-500/40 text-blue-400 font-black uppercase tracking-tighter hover:bg-blue-500/10 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to campaigns
+            <ArrowLeft className="w-4 h-4" /> Back to network
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-12 pb-24 px-6 max-w-6xl mx-auto">
-      {/* Back link */}
-      <Link
-        href="/projects"
-        className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white mb-8 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" /> All campaigns
-      </Link>
+    <div className="min-h-screen bg-black text-neutral-200">
+      <InfiniteDataStream text={`[CAMPAIGN_NODE_${projectId.toString().padStart(4, '0')}] —— ENCRYPTED_STATE_MONITOR —— TEE_ATTESTATION_ACTIVE —— `} color="blue" />
+      
+      <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 text-[10px] font-mono text-neutral-500 hover:text-blue-400 mb-12 uppercase tracking-widest transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> All campaigns
+        </Link>
 
-      {projectLoading ? (
-        <div className="animate-pulse space-y-6">
-          <div className="h-16 bg-neutral-900/60 rounded-3xl" />
-          <div className="h-64 bg-neutral-900/40 rounded-3xl" />
-        </div>
-      ) : projectError || isProjectMissing ? (
-        <div className="bg-neutral-900/40 border border-red-900/40 rounded-3xl p-10 text-center">
-          <h2 className="text-xl font-semibold mb-2">Campaign #{projectId} not found</h2>
-          <p className="text-neutral-500 text-sm">
-            {projectError?.message.slice(0, 160) ??
-              'This project id has never been created on-chain.'}
-          </p>
-        </div>
-      ) : project ? (
-        <>
-          {/* Header */}
-          <div className="relative overflow-hidden bg-neutral-900/40 border border-neutral-800 rounded-3xl p-8 mb-8">
-            <div className="absolute -top-20 -right-20 w-80 h-80 bg-indigo-500/15 blur-3xl rounded-full pointer-events-none" />
-            <div className="relative z-10 flex flex-col gap-8">
-              <div className="max-w-4xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium mb-4">
-                  <Lock className="w-3 h-3" /> Confidential campaign
+        {projectLoading ? (
+          <div className="animate-pulse space-y-8">
+            <div className="h-40 bg-[#050505] border border-blue-500/10" />
+            <div className="grid lg:grid-cols-3 gap-8">
+               <div className="h-64 bg-[#050505] border border-blue-500/10" />
+               <div className="lg:col-span-2 h-96 bg-[#050505] border border-blue-500/10" />
+            </div>
+          </div>
+        ) : projectError || isProjectMissing ? (
+          <motion.div 
+            {...fadeInUp}
+            className="bg-[#050505] border border-red-500/20 p-20 text-center"
+          >
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-4">Node Not Found</h2>
+            <p className="text-neutral-500 font-mono text-xs uppercase">
+              {projectError?.message.slice(0, 160) ?? 'This project id has never been created on-chain.'}
+            </p>
+          </motion.div>
+        ) : project ? (
+          <>
+            {/* Header */}
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#050505] border border-blue-500/20 p-8 mb-12 relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                 <Cpu className="w-32 h-32 text-blue-500" />
+              </div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 text-blue-400 font-mono text-xs mb-6 tracking-[0.3em] uppercase">
+                  <Lock className="w-4 h-4" />
+                  <span>Confidential Node</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-                  {project.title || `Campaign #${projectId}`}
+                <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-white uppercase mb-6 leading-none">
+                  {project.title || `Campaign_${projectId}`}
                 </h1>
                 {project.description && (
-                  <p className="text-neutral-400 text-base leading-relaxed break-words">
+                  <p className="text-neutral-500 font-mono text-sm uppercase max-w-3xl mb-10 leading-tight">
                     {project.description}
                   </p>
                 )}
-              </div>
-
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-6 border-t border-neutral-800/60">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-neutral-500 mb-1.5">
-                    <Crown className="w-3 h-3" /> Creator
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="text-sm font-mono text-neutral-300 truncate">
-                      <AddressLink address={project.sponsoree} shorten={false} />
-                    </p>
-                    {isSponsoree && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] whitespace-nowrap">
-                        that&apos;s you
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-8 border-t border-blue-500/10">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-mono text-blue-500/40 uppercase mb-2 tracking-widest">Initialization_Creator</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-mono text-white truncate">
+                        <AddressLink address={project.sponsoree} shorten={false} />
                       </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0">
-                  <Stat
-                    icon={<Clock className="w-4 h-4" />}
-                    label={countdown.ended ? 'Status' : 'Time left'}
-                    value={
-                      project.isFinalized
-                        ? 'Finalized'
-                        : countdown.ended
-                          ? 'Awaiting reveal'
-                          : countdown.label
-                    }
-                    tone={
-                      project.isFinalized
-                        ? 'emerald'
-                        : countdown.ended
-                          ? 'amber'
-                          : 'indigo'
-                    }
-                  />
-                  {project.isAuction ? (
-                    <Stat
-                      icon={<Zap className="w-4 h-4" />}
-                      label="Mode"
-                      value="Auction"
-                      tone="amber"
-                    />
-                  ) : (
-                    <Stat
-                      icon={<Trophy className="w-4 h-4" />}
-                      label="Top K"
-                      value={String(project.topKLimit)}
-                    />
-                  )}
-                  <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-3 min-w-[110px]">
-                    <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 mb-1">
-                      <ShieldCheck className="w-4 h-4" /> Identity
+                      {isSponsoree && (
+                        <span className="text-[9px] font-mono text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 uppercase">OWNER</span>
+                      )}
                     </div>
-                    <VerifiedBadge reclaimProofId={project.reclaimProofId} />
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 shrink-0">
+                    <Stat
+                      icon={<Clock className="w-4 h-4" />}
+                      label={countdown.ended ? 'State' : 'Time_Remaining'}
+                      value={
+                        project.isFinalized
+                          ? 'FINALIZED'
+                          : countdown.ended
+                            ? 'DECRYPTING'
+                            : countdown.label
+                      }
+                      active={!countdown.ended && !project.isFinalized}
+                    />
+                    {project.isAuction ? (
+                      <Stat
+                        icon={<Zap className="w-4 h-4" />}
+                        label="Mode"
+                        value="AUCTION"
+                        highlight="amber"
+                      />
+                    ) : (
+                      <Stat
+                        icon={<Trophy className="w-4 h-4" />}
+                        label="Top_K"
+                        value={`${project.topKLimit}_SPOTS`}
+                      />
+                    )}
+                    <div className="bg-black border border-blue-500/10 p-4 min-w-[140px]">
+                      <p className="text-[9px] font-mono text-neutral-600 uppercase mb-2 tracking-widest">Identity</p>
+                      <VerifiedBadge reclaimProofId={project.reclaimProofId} />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left: sponsor panel + (if sponsoree) admin */}
-            <div className="lg:col-span-1 space-y-6">
-              {!countdown.ended && !project.isFinalized && !isSponsoree && (
-                <SponsorPanel
-                  amount={amount}
-                  setAmount={setAmount}
-                  needsAuthorize={!isOperator}
-                  sponsorStep={sponsorStep}
-                  onSponsorFlow={handleSponsorFlow}
-                  addressConnected={!!address}
-                  sponsorError={sponsorError}
-                  sponsorSuccess={sponsorSuccess}
-                  isAuction={project.isAuction}
-                  minBidAmount={project.minBidAmount}
-                />
-              )}
+            <div className="grid lg:grid-cols-12 gap-12">
+              {/* Left Column: Actions */}
+              <div className="lg:col-span-4 space-y-8">
+                {!countdown.ended && !project.isFinalized && !isSponsoree && (
+                  <SponsorPanel
+                    amount={amount}
+                    setAmount={setAmount}
+                    needsAuthorize={!isOperator}
+                    sponsorStep={sponsorStep}
+                    onSponsorFlow={handleSponsorFlow}
+                    addressConnected={!!address}
+                    sponsorError={sponsorError}
+                    sponsorSuccess={sponsorSuccess}
+                    isAuction={project.isAuction}
+                    minBidAmount={project.minBidAmount}
+                  />
+                )}
 
-              {isSponsoree && (
-                <SponsoreePanel
-                  isFinalized={project.isFinalized}
-                  countdownEnded={countdown.ended}
-                  cooldownRemaining={cooldownRemaining}
-                  isRefreshing={isRefreshing}
+                {isSponsoree && (
+                  <SponsoreePanel
+                    isFinalized={project.isFinalized}
+                    countdownEnded={countdown.ended}
+                    cooldownRemaining={cooldownRemaining}
+                    cooldownLabel={cooldownCountdown.label}
+                    isRefreshing={isRefreshing}
+                    awaitingOracle={awaitingOracle}
+                    onRefresh={handleRefreshLeaderboard}
+                    error={refreshError}
+                  />
+                )}
+
+                {(isSponsoree && (project.isFinalized || (countdown.ended && project.isAuction))) && (
+                  <WithdrawPanel
+                    isFinalized={!!topKSponsorsSet}
+                    isWithdrawing={isWithdrawing}
+                    onWithdraw={handleWithdrawFunds}
+                    error={withdrawError}
+                    success={withdrawSuccess}
+                    hasWithdrawn={hasWithdrawn}
+                    isAuction={project.isAuction}
+                  />
+                )}
+
+                {!isSponsoree && (project.isFinalized || project.isAuction) && (
+                  <RefundPanel
+                    isTopKSponsor={!!isTopKSponsor}
+                    canClaimRefund={canClaimRefund}
+                    hasClaimedRefund={!!hasClaimedRefund}
+                    isClaimingRefund={isClaimingRefund}
+                    onClaim={handleClaimRefund}
+                    error={claimRefundError}
+                    success={claimRefundSuccess}
+                    winnersSet={!!topKSponsorsSet}
+                    isConnected={!!address}
+                    isAuction={project.isAuction}
+                  />
+                )}
+
+                {!isSponsoree && countdown.ended && !project.isFinalized && (
+                  <motion.div {...fadeInUp} className="bg-[#050505] border border-blue-500/10 p-8 font-mono text-[10px] text-neutral-500 uppercase flex items-center gap-3">
+                    <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
+                    <span>Sponsorship window closed. Waiting for owner to reveal state.</span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Right Column: Leaderboard */}
+              <div className="lg:col-span-8">
+                <LeaderboardPanel
+                  loading={leaderboardLoading}
                   awaitingOracle={awaitingOracle}
-                  onRefresh={handleRefreshLeaderboard}
-                  error={refreshError}
-                />
-              )}
-
-              {/* Sponsoree: withdraw panel (after finalization/deadline) */}
-              {isSponsoree && (project.isFinalized || (countdown.ended && project.isAuction)) && (
-                <StandardWithdrawPanel
-                  isFinalized={!!topKSponsorsSet}
-                  isWithdrawing={isWithdrawing}
-                  onWithdraw={handleWithdrawFunds}
-                  error={withdrawError}
-                  success={withdrawSuccess}
-                  hasWithdrawn={hasWithdrawn}
+                  error={leaderboardFetchError}
+                  hash={latestLeaderboardHash}
+                  payload={leaderboard}
+                  historyCount={leaderboardHistory ? (leaderboardHistory as readonly string[]).length : 0}
+                  topKLimit={project.topKLimit}
+                  currentAddress={address}
+                  isFinalized={project.isFinalized}
                   isAuction={project.isAuction}
                 />
-              )}
-
-              {/* Non-top-K sponsor: refund panel */}
-              {!isSponsoree && (project.isFinalized || project.isAuction) && (
-                <RefundPanel
-                  isTopKSponsor={!!isTopKSponsor}
-                  canClaimRefund={canClaimRefund}
-                  hasClaimedRefund={!!hasClaimedRefund}
-                  isClaimingRefund={isClaimingRefund}
-                  onClaim={handleClaimRefund}
-                  error={claimRefundError}
-                  success={claimRefundSuccess}
-                  winnersSet={!!topKSponsorsSet}
-                  isConnected={!!address}
-                  isAuction={project.isAuction}
-                />
-              )}
-
-              {!isSponsoree && countdown.ended && !project.isFinalized && (
-                <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-6">
-                  <div className="flex items-center gap-2 text-neutral-400 text-sm">
-                    <Clock className="w-4 h-4" />
-                    Sponsorship window closed. Wait for the creator to trigger the final reveal.
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
-
-            {/* Right: leaderboard */}
-            <div className="lg:col-span-2">
-              <LeaderboardPanel
-                loading={leaderboardLoading}
-                awaitingOracle={awaitingOracle}
-                error={leaderboardFetchError}
-                hash={latestLeaderboardHash}
-                payload={leaderboard}
-                historyCount={leaderboardHistory ? (leaderboardHistory as readonly string[]).length : 0}
-                topKLimit={project.topKLimit}
-                currentAddress={address}
-                isFinalized={project.isFinalized}
-                isAuction={project.isAuction}
-              />
-            </div>
-          </div>
-        </>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-// --- Small presentational components ------------------------------------
+// --- Components -----------------------------------------------------------
 
 function Stat({
   icon,
   label,
   value,
-  tone = 'neutral',
+  active = false,
+  highlight = 'none'
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  tone?: 'neutral' | 'indigo' | 'emerald' | 'amber';
+  active?: boolean;
+  highlight?: 'none' | 'amber' | 'blue';
 }) {
-  const toneClass = {
-    neutral: 'text-neutral-200',
-    indigo: 'text-indigo-300',
-    emerald: 'text-emerald-300',
-    amber: 'text-amber-300',
-  }[tone];
   return (
-    <div className="bg-neutral-950/60 border border-neutral-800 rounded-2xl p-3 min-w-[110px]">
-      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 mb-1">
-        {icon}
+    <div className="bg-black border border-blue-500/10 p-4 min-w-[140px]">
+      <p className="text-[9px] font-mono text-neutral-600 uppercase mb-2 tracking-widest flex items-center gap-2">
+        <span className={active ? 'text-blue-500 animate-pulse' : ''}>{icon}</span>
         {label}
-      </div>
-      <p className={`font-semibold text-sm ${toneClass}`}>{value}</p>
+      </p>
+      <p className={`font-mono text-[10px] font-black uppercase ${
+        highlight === 'amber' ? 'text-amber-500' : 
+        highlight === 'blue' || active ? 'text-blue-400' : 'text-white'
+      }`}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -888,107 +830,74 @@ function SponsorPanel(props: {
 }) {
   const minBidHuman =
     props.isAuction && props.minBidAmount && props.minBidAmount > 0n
-      ? (Number(props.minBidAmount) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })
+      ? (Number(props.minBidAmount) / 1e6).toFixed(2)
       : null;
   const busy = props.sponsorStep !== 'idle';
 
-  const buttonLabel = () => {
-    if (props.sponsorStep === 'authorizing') {
-      return (
-        <>
-          <div className="w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin" />
-          Authorizing… (1 of 2)
-        </>
-      );
-    }
-    if (props.sponsorStep === 'sponsoring') {
-      return (
-        <>
-          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-          Encrypting & sending…
-        </>
-      );
-    }
-    if (props.needsAuthorize) {
-      return (
-        <>
-          <ShieldCheck className="w-4 h-4" /> {props.isAuction ? 'Authorize & Bid' : 'Authorize & Sponsor'}
-        </>
-      );
-    }
-    return (
-      <>
-        <Upload className="w-4 h-4" /> {props.isAuction ? 'Place Confidential Bid' : 'Send Confidential Sponsorship'}
-      </>
-    );
-  };
-
   return (
-    <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 relative overflow-hidden">
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
-      <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-6 flex items-center gap-2 relative z-10">
-        <Send className="w-4 h-4" /> {props.isAuction ? 'Bid' : 'Sponsor'} confidentially
-      </h3>
-
-      {!props.addressConnected ? (
-        <p className="text-neutral-500 text-sm">
-          Connect your wallet to {props.isAuction ? 'bid on' : 'sponsor'} this campaign.
-        </p>
-      ) : (
-        <div className="relative z-10">
-          {minBidHuman && (
-            <div className="mb-4 flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2">
-              <Zap className="w-3 h-3 shrink-0" />
-              Minimum bid: <span className="font-mono font-semibold">{minBidHuman} FUNDME</span>
-            </div>
-          )}
-          <label className="text-xs text-neutral-400 mb-2 block">
-            {props.isAuction ? 'Bid amount' : 'Amount'} (FUNDME)
-          </label>
-          <div className="relative mb-4">
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={props.amount}
-              onChange={(e) => props.setAmount(e.target.value)}
-              placeholder="0.00"
-              disabled={busy}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder-neutral-700 disabled:opacity-50"
-            />
-            <span className="absolute right-4 top-3.5 text-neutral-500 text-xs font-semibold">
-              FUNDME
-            </span>
-          </div>
-
-          <button
-            onClick={props.onSponsorFlow}
-            disabled={busy || !props.amount}
-            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/40 disabled:cursor-not-allowed text-white font-semibold flex items-center justify-center gap-2 transition-colors"
-          >
-            {buttonLabel()}
-          </button>
-
-          {props.needsAuthorize && !busy && (
-            <p className="mt-2 text-[11px] text-neutral-500 text-center">
-              Two wallet confirmations required (authorize, then {props.isAuction ? 'bid' : 'sponsor'}).
-            </p>
-          )}
-
-          {props.sponsorError && (
-            <p className="mt-3 text-xs text-red-400 break-words">{props.sponsorError}</p>
-          )}
-          {props.sponsorSuccess && (
-            <p className="mt-3 text-xs text-emerald-400">{props.sponsorSuccess}</p>
-          )}
-
-          <p className="text-xs text-center text-neutral-500 mt-4">
-            Your amount is encrypted off-chain by Nox before it ever leaves your
-            browser. Only the creator can decrypt it.
+    <motion.div {...fadeInUp} className="bg-[#050505] border-2 border-blue-500/20 p-1 font-mono">
+      <div className="bg-blue-500/10 p-4 border border-blue-500/20 mb-1 flex justify-between items-center">
+        <span className="text-blue-500 uppercase text-[10px] font-black tracking-widest">
+           {props.isAuction ? 'Place_Bid' : 'Sponsor_Init'}
+        </span>
+        <Send className="w-3 h-3 text-blue-500" />
+      </div>
+      
+      <div className="p-6 space-y-6">
+        {!props.addressConnected ? (
+          <p className="text-[10px] text-neutral-500 uppercase text-center py-4">
+            Connect wallet to participate in node.
           </p>
-        </div>
-      )}
-    </div>
+        ) : (
+          <>
+            {minBidHuman && (
+              <div className="p-3 bg-amber-500/5 border border-amber-500/20 text-[9px] text-amber-500 uppercase tracking-tight">
+                * Minimum bid required: {minBidHuman} FUNDME
+              </div>
+            )}
+            <div>
+              <label className="text-[9px] font-mono text-neutral-600 mb-2 block uppercase tracking-widest">Input_Amount (FME)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={props.amount}
+                  onChange={(e) => props.setAmount(e.target.value)}
+                  placeholder="0.00"
+                  disabled={busy}
+                  className="w-full bg-black border border-blue-500/10 py-4 px-4 text-white font-mono text-xl focus:outline-none focus:border-blue-500/50 transition-colors placeholder-neutral-800"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={props.onSponsorFlow}
+              disabled={busy || !props.amount}
+              className="w-full py-4 bg-blue-500 text-black font-black uppercase tracking-tighter hover:bg-blue-400 disabled:bg-blue-500/10 disabled:text-blue-500/30 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
+            >
+              {props.sponsorStep === 'authorizing' ? 'TX_AUTH_1/2' : 
+               props.sponsorStep === 'sponsoring' ? 'TX_INIT_2/2' : 
+               props.needsAuthorize ? 'AUTH & SEND' : 'SEND_ENCRYPTED'}
+            </button>
+
+            {props.sponsorError && (
+              <p className="text-[9px] text-red-500 uppercase font-bold">{props.sponsorError}</p>
+            )}
+            {props.sponsorSuccess && (
+              <p className="text-[9px] text-green-500 uppercase font-bold">{props.sponsorSuccess}</p>
+            )}
+
+            <div className="pt-4 border-t border-blue-500/5 flex items-start gap-3">
+               <Lock className="w-3 h-3 text-blue-500/40 shrink-0 mt-0.5" />
+               <p className="text-[8px] text-neutral-600 uppercase leading-tight">
+                 Contributions are homomorphically encrypted. Only the iExec Nox TEE can access raw values for ranking.
+               </p>
+            </div>
+          </>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -996,69 +905,57 @@ function SponsoreePanel(props: {
   isFinalized: boolean;
   countdownEnded: boolean;
   cooldownRemaining: number;
+  cooldownLabel: string;
   isRefreshing: boolean;
   awaitingOracle: boolean;
   onRefresh: (isFinalReveal: boolean) => void;
   error: string | null;
 }) {
-  const cooldownHours = Math.floor(props.cooldownRemaining / 3600);
-  const cooldownMinutes = Math.floor((props.cooldownRemaining % 3600) / 60);
-  const cooldownSeconds = props.cooldownRemaining % 60;
   const canIntermediate = !props.countdownEnded && props.cooldownRemaining === 0;
   const canFinalize = props.countdownEnded && !props.isFinalized;
   const busy = props.isRefreshing || props.awaitingOracle;
 
   return (
-    <div className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-6">
-      <h3 className="text-sm font-semibold text-amber-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <Crown className="w-4 h-4" /> Creator controls
-      </h3>
+    <motion.div {...fadeInUp} className="bg-[#050505] border-2 border-amber-500/20 p-1 font-mono">
+      <div className="bg-amber-500/10 p-4 border border-amber-500/20 mb-1 flex justify-between items-center">
+        <span className="text-amber-500 uppercase text-[10px] font-black tracking-widest">Creator_Controls</span>
+        <Crown className="w-3 h-3 text-amber-500" />
+      </div>
 
-      {props.isFinalized ? (
-        <p className="text-sm text-neutral-300">
-          This campaign is finalized. Final leaderboard is published below.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <button
-            onClick={() => props.onRefresh(false)}
-            disabled={!canIntermediate || busy}
-            className="w-full py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${props.awaitingOracle ? 'animate-spin' : ''}`} />
-            {props.awaitingOracle
-              ? 'Waiting for oracle…'
-              : canIntermediate
-                ? 'Refresh leaderboard'
-                : props.countdownEnded
-                  ? 'Use final reveal below'
-                  : cooldownHours > 0
-                      ? `Cooldown ${cooldownHours}h ${cooldownMinutes}m`
-                      : cooldownMinutes > 0
-                        ? `Cooldown ${cooldownMinutes}m ${cooldownSeconds}s`
-                        : `Cooldown ${cooldownSeconds}s`}
-          </button>
+      <div className="p-6 space-y-4">
+        {props.isFinalized ? (
+          <p className="text-[10px] text-amber-500/60 uppercase text-center">Protocol_State: Finalized</p>
+        ) : (
+          <>
+            <button
+              onClick={() => props.onRefresh(false)}
+              disabled={!canIntermediate || busy}
+              className="w-full py-3 border border-amber-500/30 text-amber-500 font-black text-[10px] uppercase tracking-widest hover:bg-amber-500/10 disabled:opacity-20 transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw className={`w-3 h-3 ${props.awaitingOracle ? 'animate-spin' : ''}`} />
+              {props.awaitingOracle
+                ? 'RECOGNIZING...'
+                : props.cooldownRemaining > 0
+                ? `COOLDOWN: ${props.cooldownLabel}`
+                : 'REFRESH_RANKING'}
+            </button>
 
-          <button
-            onClick={() => props.onRefresh(true)}
-            disabled={!canFinalize || busy}
-            className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-neutral-950 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
-          >
-            <Zap className="w-4 h-4" />
-            {props.awaitingOracle ? 'Waiting for oracle…' : 'Trigger final reveal'}
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => props.onRefresh(true)}
+              disabled={!canFinalize || busy}
+              className="w-full py-3 bg-amber-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-amber-400 disabled:opacity-20 transition-colors flex items-center justify-center gap-2"
+            >
+              <Zap className="w-3 h-3" />
+              {props.awaitingOracle ? 'PROCESSING...' : 'FINAL_STATE_REVEAL'}
+            </button>
+          </>
+        )}
 
-      {props.error && (
-        <p className="mt-3 text-xs text-red-400 break-words">{props.error}</p>
-      )}
-
-      <p className="mt-4 text-xs text-neutral-500">
-        Refresh calls signal the TEE oracle to recompute the ranking from encrypted
-        balances. Intermediate refreshes are rate-limited.
-      </p>
-    </div>
+        {props.error && (
+          <p className="text-[9px] text-red-500 uppercase font-bold">{props.error}</p>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1076,134 +973,102 @@ function LeaderboardPanel(props: {
 }) {
   const isFinal = props.isFinalized || !!props.payload?.isFinal;
   const isAuction = props.isAuction || !!props.payload?.isAuction;
+  
   return (
-    <div className="bg-neutral-900/30 border border-neutral-800 rounded-3xl p-8">
-      <div className="flex items-start justify-between mb-6">
+    <motion.div {...fadeInUp} transition={{ delay: 0.1 }} className="bg-[#050505] border border-blue-500/20 p-8 relative">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-10">
         <div>
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" /> Leaderboard
-            {isFinal && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/20">
-                Final
-              </span>
-            )}
-            {isAuction && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-600/15 text-amber-400 border border-amber-600/20">
-                Auction
-              </span>
-            )}
-          </h3>
-          <p className="text-xs text-neutral-500 mt-1">
-            {isAuction
-              ? isFinal
-                ? 'Auction complete. The top bidder wins; all others receive refunds.'
-                : 'Auction in progress. The highest bidder at close wins.'
-              : isFinal
-                ? 'Campaign complete. The top-K sponsors contributions have been awarded; others can claim refunds.'
-                : 'Rankings published by the TEE oracle. Amounts stay secret to protect donor privacy.'}
-          </p>
+           <div className="flex items-center gap-3 mb-2">
+             <h3 className="text-3xl font-black text-white tracking-tighter uppercase">Leaderboard.</h3>
+             {isFinal && <span className="text-[9px] font-mono text-green-500 border border-green-500/30 px-2 py-0.5 uppercase">Final</span>}
+             {isAuction && <span className="text-[9px] font-mono text-amber-500 border border-amber-500/30 px-2 py-0.5 uppercase">Auction</span>}
+           </div>
+           <p className="text-neutral-600 font-mono text-[10px] uppercase max-w-md leading-tight">
+             TEE-VERIFIED RANKINGS. ALL CONTRIBUTION AMOUNTS ARE OBFUSCATED VIA ENCLAVE COMPUTATION.
+           </p>
         </div>
-        <div className="text-xs text-neutral-500 text-right">
-          <p>Revision #{props.historyCount}</p>
-          {props.hash && (
-            <p className="font-mono text-[10px] mt-1 truncate max-w-[160px]">
-              {props.hash.slice(0, 14)}…
-            </p>
-          )}
+        <div className="text-right font-mono">
+           <p className="text-[9px] text-neutral-600 uppercase mb-1">Revision: #{props.historyCount.toString().padStart(3, '0')}</p>
+           {props.hash && (
+             <p className="text-[8px] text-blue-500/40 uppercase break-all max-w-[120px] ml-auto">
+               HASH: {props.hash.slice(0, 20)}...
+             </p>
+           )}
         </div>
       </div>
 
       {props.awaitingOracle && (
-        <div className="flex items-center gap-3 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3 mb-4">
-          <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-          Waiting for the TEE oracle to compute the ranking…
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 flex items-center gap-4 mb-6">
+          <Activity className="w-4 h-4 text-blue-500 animate-pulse" />
+          <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Enclave_Computation_In_Progress...</span>
         </div>
       )}
+
       {!props.hash ? (
         !props.awaitingOracle && (
           <EmptyState
-            icon={<Clock className="w-6 h-6" />}
-            title="No leaderboard yet"
-            body="The creator hasn't triggered a reveal. Once they do, the TEE oracle will publish ranked positions to IPFS."
+            icon={<Clock className="w-8 h-8" />}
+            title="NO_DATA_REVEALED"
+            body="THE CREATOR HAS NOT TRIGGERED AN ENCLAVE STATE REVEAL YET."
           />
         )
       ) : props.loading ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-14 bg-neutral-950/60 border border-neutral-800 rounded-2xl animate-pulse"
-            />
+            <div key={i} className="h-16 bg-black border border-blue-500/5 animate-pulse" />
           ))}
         </div>
       ) : props.error ? (
         <EmptyState
-          icon={<Flame className="w-6 h-6 text-red-400" />}
-          title="Couldn't load leaderboard"
-          body={props.error}
+          icon={<Activity className="w-8 h-8 text-red-500/40" />}
+          title="FETCH_FAILURE"
+          body={props.error.toUpperCase()}
         />
       ) : !props.payload ? (
         <EmptyState
-          icon={<Clock className="w-6 h-6" />}
-          title="Parsing leaderboard…"
-          body="IPFS fetch returned an unexpected payload."
+          icon={<Clock className="w-8 h-8" />}
+          title="PARSING_ERROR"
+          body="THE RETURNED STATE PAYLOAD IS MALFORMED."
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {props.payload.entries.slice(0, props.topKLimit).map((entry) => {
-            const isMe =
-              props.currentAddress &&
-              entry.sponsor.toLowerCase() === props.currentAddress.toLowerCase();
+            const isMe = props.currentAddress && entry.sponsor.toLowerCase() === props.currentAddress.toLowerCase();
             const isWinner = isFinal && (isAuction ? entry.rank === 1 : entry.rank <= props.topKLimit);
-            return (              <div
+            
+            return (
+              <div
                 key={`${entry.rank}-${entry.sponsor}`}
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-colors ${
-                  isWinner
-                    ? 'bg-amber-500/10 border-amber-500/30'
-                    : isMe
-                      ? 'bg-indigo-500/10 border-indigo-500/30'
-                      : 'bg-neutral-950/60 border-neutral-800 hover:border-neutral-700'
+                className={`p-4 border transition-all flex items-center justify-between group ${
+                  isWinner ? 'bg-amber-500/5 border-amber-500/20' : 
+                  isMe ? 'bg-blue-500/5 border-blue-500/30' : 
+                  'bg-black border-blue-500/10 hover:border-blue-500/30'
                 }`}
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold font-mono flex-shrink-0 ${
-                      entry.rank === 1
-                        ? 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
-                        : entry.rank === 2
-                          ? 'bg-neutral-300/10 text-neutral-200 border border-neutral-500/20'
-                          : entry.rank === 3
-                            ? 'bg-orange-500/15 text-orange-300 border border-orange-500/20'
-                            : 'bg-neutral-900 text-neutral-400 border border-neutral-800'
-                    }`}
-                  >
-                    {entry.rank}
+                <div className="flex items-center gap-6 flex-1 min-w-0">
+                  <div className={`w-12 h-12 flex items-center justify-center font-black font-mono text-sm border ${
+                    entry.rank === 1 ? 'border-amber-500 text-amber-500' :
+                    entry.rank === 2 ? 'border-neutral-400 text-neutral-400' :
+                    entry.rank === 3 ? 'border-orange-600 text-orange-600' :
+                    'border-blue-500/20 text-blue-500/40'
+                  }`}>
+                    {entry.rank.toString().padStart(2, '0')}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-mono text-sm text-neutral-200 break-all">
+                    <p className={`font-mono text-xs break-all ${isWinner ? 'text-white' : 'text-neutral-400'}`}>
                       <AddressLink address={entry.sponsor} shorten={false} />
                     </p>
                     {isWinner && (
-                      <p className="text-[10px] uppercase tracking-wider text-amber-400 font-semibold">
-                        winner
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
+                        <span className="text-[9px] font-mono text-amber-500 uppercase font-black tracking-widest">Confirmed_Winner</span>
+                      </div>
                     )}
-                    {/* {isMe && !isWinner && (
-                      <p className="text-[10px] uppercase tracking-wider text-indigo-400">
-                        that&apos;s you
-                      </p>
-                    )}
-                    {isMe && isWinner && (
-                      <p className="text-[10px] uppercase tracking-wider text-amber-400 font-semibold">
-                        winner — that&apos;s you!
-                      </p>
-                    )} */}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-neutral-500 flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> amount secret
-                  </span>
+                <div className="flex items-center gap-3">
+                  <Lock className="w-3 h-3 text-blue-500/20" />
+                  <span className="text-[9px] font-mono text-neutral-600 uppercase tracking-tighter">Amount_Confidential</span>
                 </div>
               </div>
             );
@@ -1211,18 +1076,18 @@ function LeaderboardPanel(props: {
 
           {props.payload.entries.length === 0 && (
             <EmptyState
-              icon={<Clock className="w-6 h-6" />}
-              title="No sponsors yet"
-              body="Be the first to sponsor this campaign."
+              icon={<Activity className="w-8 h-8 text-neutral-800" />}
+              title="NULL_SPONSOR_LOG"
+              body="NO CONTRIBUTIONS HAVE BEEN DETECTED FOR THIS NODE."
             />
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
-function StandardWithdrawPanel(props: {
+function WithdrawPanel(props: {
   isFinalized: boolean;
   isWithdrawing: boolean;
   onWithdraw: () => void;
@@ -1232,42 +1097,32 @@ function StandardWithdrawPanel(props: {
   isAuction?: boolean;
 }) {
   return (
-    <div className={`${props.isAuction ? 'bg-amber-500/5 border-amber-500/20' : 'bg-indigo-500/5 border-indigo-500/20'} border rounded-3xl p-6`}>
-      <h3 className={`text-sm font-semibold ${props.isAuction ? 'text-amber-300' : 'text-indigo-300'} uppercase tracking-wider mb-4 flex items-center gap-2`}>
-        {props.isAuction ? <Zap className="w-4 h-4" /> : <Download className="w-4 h-4" />} 
-        Withdraw {props.isAuction ? 'auction' : 'campaign'} funds
-      </h3>
-      {props.hasWithdrawn || !!props.success ? (
-        <p className="text-sm text-emerald-400">
-          {props.success ?? 'Funds withdrawn to your wallet.'}
-        </p>
-      ) : !props.isFinalized ? (
-        <p className="text-sm text-neutral-400">
-          Waiting for the oracle to finalize the results. This happens automatically after the final reveal.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-neutral-400">
-            The campaign is finalized. You can now withdraw the {props.isAuction ? 'winning bid' : 'top-K contributions'} to your wallet.
-          </p>
-          <button
-            onClick={props.onWithdraw}
-            disabled={props.isWithdrawing}
-            className={`w-full py-3 rounded-xl ${props.isAuction ? 'bg-amber-600 hover:bg-amber-500' : 'bg-indigo-600 hover:bg-indigo-500'} disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors`}
-          >
-            {props.isWithdrawing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Withdrawing…
-              </>
-            ) : (
-              'Withdraw Funds'
-            )}
-          </button>
-        </div>
-      )}
-      {props.error && <p className="mt-3 text-xs text-red-400 break-words">{props.error}</p>}
-    </div>
+    <motion.div {...fadeInUp} className={`bg-[#050505] border-2 ${props.isAuction ? 'border-amber-500/20' : 'border-blue-500/20'} p-1 font-mono`}>
+      <div className={`${props.isAuction ? 'bg-amber-500/10 border-amber-500/20' : 'bg-blue-500/10 border-blue-500/20'} p-4 border mb-1 flex justify-between items-center`}>
+        <span className={`${props.isAuction ? 'text-amber-500' : 'text-blue-500'} uppercase text-[10px] font-black tracking-widest`}>Asset_Withdrawal</span>
+        {props.isAuction ? <Zap className="w-3 h-3 text-amber-500" /> : <Download className="w-3 h-3 text-blue-500" />}
+      </div>
+      
+      <div className="p-6">
+        {props.hasWithdrawn || !!props.success ? (
+          <p className="text-[10px] text-green-500 uppercase font-bold text-center">Funds_Successfully_Relocated</p>
+        ) : !props.isFinalized ? (
+          <p className="text-[10px] text-neutral-600 uppercase leading-tight">Waiting for TEE finalization event to open withdrawal bridge.</p>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-[10px] text-neutral-400 uppercase leading-tight">Protocol finalized. bridge open for {props.isAuction ? 'Winning_Bid' : 'Top_K_Pool'}.</p>
+            <button
+              onClick={props.onWithdraw}
+              disabled={props.isWithdrawing}
+              className={`w-full py-3 ${props.isAuction ? 'bg-amber-500 text-black' : 'bg-blue-500 text-black'} font-black text-[10px] uppercase tracking-widest hover:opacity-80 disabled:opacity-20 transition-colors flex items-center justify-center gap-2`}
+            >
+              {props.isWithdrawing ? 'TRANSFERRING...' : 'WITHDRAW_FUNDS'}
+            </button>
+          </div>
+        )}
+        {props.error && <p className="mt-3 text-[9px] text-red-500 uppercase font-bold">{props.error}</p>}
+      </div>
+    </motion.div>
   );
 }
 
@@ -1283,90 +1138,75 @@ function RefundPanel(props: {
   isConnected: boolean;
   isAuction?: boolean;
 }) {
-  if (!props.isConnected) {
-    return (
-      <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-6">
-        <p className="text-sm text-neutral-400">Connect your wallet to check your refund status.</p>
-      </div>
-    );
-  }
+  if (!props.isConnected) return null;
 
   if (props.isTopKSponsor && props.winnersSet) {
     return (
-      <div className={`${props.isAuction ? 'bg-amber-500/5 border-amber-500/20' : 'bg-indigo-500/5 border-indigo-500/20'} border rounded-3xl p-6`}>
-        <h3 className={`text-sm font-semibold ${props.isAuction ? 'text-amber-300' : 'text-indigo-300'} uppercase tracking-wider mb-3 flex items-center gap-2`}>
-          <Trophy className="w-4 h-4" /> {props.isAuction ? 'You won the auction!' : 'You are a top sponsor!'}
+      <motion.div {...fadeInUp} className="bg-amber-500/5 border border-amber-500/20 p-8 font-mono">
+        <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Trophy className="w-4 h-4" /> NODE_WINNER_STATUS
         </h3>
-        <p className="text-sm text-neutral-300">
+        <p className="text-[10px] text-neutral-400 uppercase leading-tight">
           {props.isAuction 
-            ? 'Your bid was the highest. Your contribution has been awarded to the campaign creator.'
-            : 'Your contribution is among the top-K and has been awarded to the campaign creator.'}
+            ? 'Your bid was the highest. contribution processed.'
+            : 'You are in the top-K. contribution processed.'}
         </p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="bg-neutral-900/40 border border-neutral-800 rounded-3xl p-6">
-      <h3 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-        <RefreshCw className="w-4 h-4" /> {props.isAuction ? 'Auction' : 'Sponsorship'} refund
+    <motion.div {...fadeInUp} className="bg-[#050505] border border-blue-500/20 p-8 font-mono">
+      <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <RefreshCw className="w-4 h-4" /> REFUND_INTERFACE
       </h3>
       {props.hasClaimedRefund || !!props.success ? (
-        <p className="text-sm text-emerald-400">
-          {props.success ?? 'Refund already claimed — your contribution has been returned.'}
-        </p>
+        <p className="text-[10px] text-green-500 uppercase font-bold">Bridge_Closed: Refund_Received</p>
       ) : !props.winnersSet ? (
-        <p className="text-sm text-neutral-400">
-          Waiting for the oracle to finalize the results before refunds open.
-        </p>
+        <p className="text-[10px] text-neutral-600 uppercase leading-tight">Awaiting final reveal to compute refund eligibility.</p>
       ) : props.canClaimRefund ? (
-        <div className="space-y-3">
-          <p className="text-xs text-neutral-400">
-            {props.isAuction 
-              ? 'You did not win this auction. Claim your contribution back.'
-              : 'You are not among the top-K sponsors. Claim your contribution back.'}
-          </p>
+        <div className="space-y-4">
+          <p className="text-[10px] text-neutral-400 uppercase leading-tight">Node win status: Negative. bridge open for refund.</p>
           <button
             onClick={props.onClaim}
             disabled={props.isClaimingRefund}
-            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3 bg-blue-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-blue-400 disabled:opacity-20 transition-colors"
           >
-            {props.isClaimingRefund ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                Claiming…
-              </>
-            ) : (
-              'Claim Your Refund'
-            )}
+            {props.isClaimingRefund ? 'CLAIMING...' : 'CLAIM_REFUND'}
           </button>
         </div>
       ) : (
-        <p className="text-sm text-neutral-400">
-          You did not sponsor this project, or your refund is not available.
-        </p>
+        <p className="text-[10px] text-neutral-600 uppercase leading-tight">No refundable contribution detected for this node.</p>
       )}
-      {props.error && <p className="mt-3 text-xs text-red-400 break-words">{props.error}</p>}
+      {props.error && <p className="mt-3 text-[9px] text-red-500 uppercase font-bold">{props.error}</p>}
+    </motion.div>
+  );
+}
+
+function EmptyState({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <div className="text-center py-20 border border-dashed border-blue-500/10 bg-black flex flex-col items-center">
+      <div className="mb-6 opacity-20">{icon}</div>
+      <h4 className="font-mono text-sm font-black text-white mb-2 uppercase tracking-widest">{title}</h4>
+      <p className="text-[10px] font-mono text-neutral-600 px-12 uppercase">{body}</p>
     </div>
   );
 }
 
-function EmptyState({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function InfiniteDataStream({ text, color }: { text: string, color: 'blue' | 'indigo' }) {
+  const textColor = color === 'blue' ? 'text-blue-500/40' : 'text-indigo-500/40';
+  const borderColor = color === 'blue' ? 'border-blue-500/10' : 'border-indigo-500/10';
+  
   return (
-    <div className="text-center py-10 border border-dashed border-neutral-800 rounded-2xl bg-neutral-950/30">
-      <div className="w-12 h-12 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mx-auto mb-3">
-        {icon}
-      </div>
-      <h4 className="font-semibold text-neutral-200 mb-1">{title}</h4>
-      <p className="text-xs text-neutral-500 px-8">{body}</p>
+    <div className={`w-full overflow-hidden bg-black border-y ${borderColor} py-1.5 flex whitespace-nowrap`}>
+      <motion.div
+        className={`font-mono ${textColor} text-[9px] tracking-[0.5em] uppercase flex`}
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{ ease: "linear", duration: 30, repeat: Infinity }}
+      >
+        <span>{text.repeat(10)}</span>
+        <span>{text.repeat(10)}</span>
+      </motion.div>
     </div>
   );
 }

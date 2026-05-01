@@ -10,23 +10,22 @@
   }
 }
 
-/* Optional: Custom scrollbar styling for a sleeker web3 feel */
+/* Custom scrollbar styling for a sleeker web3 feel */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0a0a0a; 
+  background: #000000; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #262626; 
-  border-radius: 4px;
+  background: #1e3a8a; 
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #404040; 
+  background: #3b82f6; 
 }
 
 @layer base {
   body {
-    @apply selection:bg-indigo-500/30;
+    @apply selection:bg-blue-500/30;
   }
 }

@@ -49,7 +49,7 @@ export default function LandingPage() {
         
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-12 gap-12 items-center">
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-7">
               <motion.div 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -105,7 +105,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, duration: 1 }}
-              className="lg:col-span-4 hidden lg:block"
+              className="lg:col-span-5 hidden lg:block"
             >
               <LeaderboardAnimation />
             </motion.div>
@@ -191,7 +191,7 @@ export default function LandingPage() {
                 <span className="text-neutral-600">Infrastructure.</span>
               </h3>
               <p className="text-lg text-neutral-400 font-mono mb-10 leading-tight">
-                FUNDME LIVES ON ARBITRUM, BUT ITS BRAIN LIVES IN THE ENCLAVE. CONTRIBUTION AMOUNTS ARE ENCRYPTED ON-CHAIN (FHE). ONLY THE NOX ORACLE CAN DECRYPT AND RANK SPONSORS WITHOUT EXPOSING RAW DATA.
+                FUNDME LIVES ON ARBITRUM, BUT ITS BRAIN LIVES IN THE ENCLAVE. ONLY THE NOX CAN DECRYPT AND RANK SPONSORS WITHOUT EXPOSING RAW DATA IN TEE.
               </p>
               
               <div className="grid grid-cols-2 gap-4">
@@ -280,53 +280,6 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
-
-      {/* FOOTER MECHANICAL */}
-      <footer className="pt-32 pb-10 bg-[#000000]">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.div 
-            {...fadeInUp}
-            className="grid md:grid-cols-12 gap-12 mb-20 border-t border-blue-500/20 pt-20"
-          >
-            <div className="md:col-span-6">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-10 h-10 bg-blue-500 flex items-center justify-center">
-                  <Lock className="w-6 h-6 text-black" />
-                </div>
-                <span className="text-3xl font-black uppercase tracking-tighter text-white">FUNDME.</span>
-              </div>
-              <p className="text-neutral-500 font-mono text-xs max-w-sm leading-tight uppercase">
-                THE DECENTRALIZED PROTOCOL FOR CONFIDENTIAL CAPITAL FORMATION. BUILT ON ARBITRUM SEPOLIA WITH NOX TEE ARCHITECTURE.
-              </p>
-            </div>
-            
-            <div className="md:col-span-6 grid grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-mono text-blue-500 uppercase tracking-[0.3em]">Protocol_Access</h4>
-                <div className="flex flex-col gap-2 font-mono text-sm">
-                  <Link href="/projects" className="hover:text-blue-400 transition-colors tracking-tighter underline underline-offset-4 uppercase">View_Active_Nodes</Link>
-                  <Link href="/create" className="hover:text-blue-400 transition-colors tracking-tighter underline underline-offset-4 uppercase">Initialize_Campaign</Link>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-mono text-blue-500 uppercase tracking-[0.3em]">Network_Stats</h4>
-                <div className="flex flex-col gap-2 font-mono text-sm text-neutral-500 uppercase">
-                  <span>Latency: 14ms</span>
-                  <span>Uptime: 99.98%</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-10 border-t border-blue-500/10 font-mono text-[9px] text-neutral-600 uppercase">
-            <span>©{new Date().getFullYear()} FUNDME_FOUNDATION // ENCRYPTED_BY_NOX</span>
-            <div className="flex gap-6">
-              <span>Arbitrum_Sepolia_Mainnet_Ready</span>
-              <span>v1.0.42_Stable</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -352,7 +305,7 @@ function LeaderboardAnimation() {
         })).sort((a, b) => b.weight - a.weight);
         return next;
       });
-    }, 2500);
+    }, 1500);
     return () => clearInterval(interval);
   }, []);
 
@@ -406,9 +359,9 @@ function LeaderboardAnimation() {
       
       <div className="mt-6 pt-4 border-t border-blue-500/10 relative z-10">
          <div className="flex justify-between items-center text-[9px] font-mono text-neutral-500 uppercase tracking-widest">
-            <span className="flex items-center gap-1">
+            <span className="flex item s-center gap-1">
               <Shield className="w-2.5 h-2.5" /> 
-              FHE_ENABLED
+              TEE
             </span>
             <span>TEE_ATTESTED</span>
          </div>

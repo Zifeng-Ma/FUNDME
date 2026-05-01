@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldCheck, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle2, XCircle, Activity, ChevronRight } from 'lucide-react';
 import QRCode from 'react-qr-code';
+import { motion } from "framer-motion";
 
 type VerifyState = 'idle' | 'awaiting_proof' | 'verified' | 'failed';
 
@@ -22,7 +23,6 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
       setVerifyState('awaiting_proof');
       setErrorMsg(null);
 
-      // Initialize the Reclaim session server-side (secret stays on server)
       const res = await fetch('/api/reclaim/request', { method: 'POST' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -32,9 +32,7 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
       }
       const { requestUrl: sessionUrl, serialized } = await res.json();
 
-      // Dynamic import to defer the heavy crypto bundle
       const { ReclaimProofRequest } = await import('@reclaimprotocol/js-sdk');
-
       const proofRequest = await ReclaimProofRequest.fromJsonString(serialized);
 
       const onSuccess = async (proof: any) => {
@@ -44,8 +42,6 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
 
           const proofId = proof.identifier as string;
 
-          // Try to extract the Twitter/X handle from the proof context so
-          // sponsors can see which account is associated with this campaign.
           let twitterHandle: string | null = null;
           try {
             const ctx = proof?.claimData?.context
@@ -58,12 +54,9 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
               params?.handle ??
               null;
           } catch {
-            // context parse failed — handle stays null
+            // context parse failed
           }
 
-          // Encode handle into the stored string so VerifiedBadge can display
-          // a link without needing an extra chain field.
-          // Format: "@handle|proofId"  (fallback: just proofId for old format)
           const storedValue = twitterHandle
             ? `@${twitterHandle}|${proofId}`
             : proofId;
@@ -85,7 +78,6 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
       };
 
       setRequestUrl(sessionUrl);
-
       await proofRequest.startSession({ onSuccess, onError });
     } catch (err) {
       setVerifyState('failed');
@@ -107,15 +99,15 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
   };
 
   return (
-    <>
+    <div className="font-mono">
       {/* Base UI */}
       {verifyState === 'idle' && (
         <button
           type="button"
           onClick={handleStartVerification}
-          className="w-full py-3 px-4 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-indigo-500 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+          className="w-full py-3 px-4 bg-black border border-indigo-500/10 hover:border-indigo-500/40 text-[10px] text-neutral-500 hover:text-indigo-400 font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all"
         >
-          <ShieldCheck className="w-4 h-4" /> Verify Twitter/X identity (optional)
+          <ShieldCheck className="w-4 h-4" /> Verify_Identity (Optional)
         </button>
       )}
 
@@ -123,23 +115,23 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
         <button
           type="button"
           disabled
-          className="w-full py-3 px-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-500 font-semibold flex items-center justify-center gap-2 cursor-wait"
+          className="w-full py-3 px-4 bg-black border border-indigo-500/20 text-[10px] text-indigo-400 font-black uppercase tracking-widest flex items-center justify-center gap-3 cursor-wait"
         >
-          <Loader2 className="w-4 h-4 animate-spin" /> Verifying identity...
+          <Loader2 className="w-4 h-4 animate-spin" /> SESSION_ACTIVE...
         </button>
       )}
 
       {verifyState === 'verified' && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-3 py-3 px-4 bg-emerald-950/40 rounded-xl border border-emerald-500/20">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 py-4 px-6 bg-green-500/5 border border-green-500/20">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-emerald-400">
-                Twitter/X identity verified
+              <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">
+                Identity_Confirmed
               </p>
               {verifiedId && (
-                <p className="text-xs text-emerald-300/60 font-mono mt-1 truncate">
-                  {verifiedId}
+                <p className="text-[9px] text-green-500/60 font-mono mt-1 truncate uppercase">
+                  ID: {verifiedId}
                 </p>
               )}
             </div>
@@ -147,85 +139,98 @@ export function ReclaimVerifier({ onVerified, onCleared }: Props) {
           <button
             type="button"
             onClick={handleClear}
-            className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+            className="text-[9px] text-neutral-600 hover:text-indigo-400 uppercase tracking-tighter flex items-center gap-1 transition-colors"
           >
-            Reset
+            [TERMINATE_SESSION]
           </button>
         </div>
       )}
 
       {verifyState === 'failed' && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 py-3 px-4 bg-red-950/40 rounded-xl border border-red-500/20">
-            <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+          <div className="flex items-center gap-4 py-4 px-6 bg-red-500/5 border border-red-500/20">
+            <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm text-red-400">{errorMsg || 'Verification failed'}</p>
+              <p className="text-[10px] text-red-500 uppercase font-black">{errorMsg || 'VERIFICATION_FAILED'}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleRetry}
-            className="w-full py-3 px-4 rounded-xl bg-neutral-950 border border-neutral-800 hover:border-red-500 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-3 px-4 bg-black border border-red-500/20 hover:border-red-500 text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all"
           >
-            Try again
+            RETRY_INITIALIZATION
           </button>
         </div>
       )}
 
       {/* Modal Overlay */}
       {verifyState === 'awaiting_proof' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <div className="bg-neutral-900 border border-indigo-500/30 rounded-[2rem] p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
-            
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20">
-              <ShieldCheck className="w-7 h-7 text-indigo-400" />
-            </div>
-            
-            <h3 className="text-xl font-bold mb-2">Verify your identity</h3>
-            <p className="text-sm text-neutral-400 mb-8 leading-relaxed">
-              Scan the QR code with your phone camera to verify your Twitter/X handle via Reclaim Protocol.
-            </p>
-
-            <div className="relative group">
-              <div className="absolute -inset-4 bg-indigo-500/5 blur-xl rounded-full group-hover:bg-indigo-500/10 transition-colors" />
-              {requestUrl ? (
-                <div className="relative bg-white p-4 rounded-3xl mb-8 shadow-inner">
-                  <QRCode value={requestUrl} size={180} />
-                </div>
-              ) : (
-                <div className="relative h-[212px] w-[212px] flex items-center justify-center mb-8 bg-neutral-800/50 rounded-3xl">
-                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                </div>
-              )}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[#050505] border-2 border-indigo-500/30 p-1 max-w-sm w-full font-mono shadow-2xl relative"
+          >
+            <div className="bg-indigo-500/10 p-4 border border-indigo-500/20 mb-1 flex justify-between items-center">
+              <span className="text-indigo-500 uppercase text-[10px] font-black tracking-widest">Identity_Protocol // Reclaim</span>
+              <Activity className="w-3 h-3 text-indigo-500 animate-pulse" />
             </div>
 
-            <div className="flex flex-col w-full gap-4 relative z-10">
-               <button
-                type="button"
-                onClick={handleClear}
-                className="w-full py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold transition-all active:scale-[0.98]"
-              >
-                Cancel
-              </button>
+            <div className="p-8 flex flex-col items-center text-center">
+              <div className="w-16 h-16 border border-indigo-500/10 flex items-center justify-center mb-8 bg-indigo-500/5">
+                <ShieldCheck className="w-8 h-8 text-indigo-500" />
+              </div>
               
-              {requestUrl && (
-                <p className="text-[11px] text-center text-neutral-500">
-                  Already on mobile?{' '}
-                  <a
-                    href={requestUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-indigo-400 hover:text-indigo-300 underline font-medium"
-                  >
-                    Tap here to open Reclaim
-                  </a>
-                </p>
-              )}
+              <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-4">Confirm <span className="text-indigo-500">Node_ID.</span></h3>
+              <p className="text-[10px] text-neutral-500 uppercase leading-tight mb-10">
+                SCAN THE QR CODE TO ATTEST YOUR SOCIAL IDENTITY VIA ZERO-KNOWLEDGE PROOF. DATA REMAINS OBFUSCATED.
+              </p>
+
+              <div className="relative group mb-10">
+                {requestUrl ? (
+                  <div className="bg-white p-4">
+                    <QRCode value={requestUrl} size={180} />
+                  </div>
+                ) : (
+                  <div className="h-[212px] w-[212px] flex items-center justify-center bg-black border border-indigo-500/5">
+                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col w-full gap-4 relative z-10">
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="w-full py-4 border border-indigo-500/20 text-indigo-500/40 text-[10px] font-black uppercase tracking-widest hover:border-indigo-500 hover:text-indigo-500 transition-all"
+                >
+                  [CANCEL_ATTESTATION]
+                </button>
+                
+                {requestUrl && (
+                  <p className="text-[9px] text-center text-neutral-600 uppercase tracking-tight">
+                    MOBILE_DETECTED?{' '}
+                    <a
+                      href={requestUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-500 hover:text-white underline"
+                    >
+                      OPEN_DIRECT_LINK
+                    </a>
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+            
+            <div className="p-2 border-t border-indigo-500/10 flex justify-between text-[8px] text-neutral-700 uppercase">
+               <span>ZK_IDENTITY_LAYER</span>
+               <span>VER_0.4.2</span>
+            </div>
+          </motion.div>
         </div>
       )}
-    </>
+    </div>
   );
 }

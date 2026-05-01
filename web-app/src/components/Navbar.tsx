@@ -1,12 +1,14 @@
-'use client'; // This is a client component
+'use client';
 
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { LogOut, Wallet } from "lucide-react";
+import { LogOut, Wallet, Activity } from "lucide-react";
+import logo from "../../assets/logo.png";
 import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
 import { arbitrumSepolia } from 'wagmi/chains'
 import { AddressLink } from "./AddressLink";
+import { motion } from "framer-motion";
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -15,7 +17,6 @@ export function Navbar() {
     setMounted(true);
   }, []);
 
-  // Wagmi hooks to get account status and connection functions
   const { address, isConnected, isConnecting } = useAccount();
   const chainId = useChainId();
   const { connect, connectors } = useConnect();
@@ -25,59 +26,61 @@ export function Navbar() {
   const isWrongChain = isConnected && chainId !== arbitrumSepolia.id;
 
   return (
-    <nav className="border-b border-neutral-800/50 bg-neutral-950/50 backdrop-blur-md sticky top-0 w-full z-50">
+    <nav className="border-b border-blue-500/10 bg-black/80 backdrop-blur-md sticky top-0 w-full z-50 font-mono">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo and App Name */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="FundMe logo" width={32} height={32} />
-          <span className="text-xl font-bold tracking-widest uppercase">FundMe</span>
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 flex items-center justify-center transition-transform group-hover:scale-110">
+            <Image src={logo} alt="FundMe Logo" width={40} height={40} className="object-contain" />
+          </div>
+          <span className="text-xl font-black tracking-tighter uppercase text-white group-hover:text-blue-500 transition-colors">FundMe.</span>
         </Link>
         
         {/* Navigation Links */}
-        <div className="hidden md:flex items-center gap-6">
-            <Link href="/projects" className="text-neutral-400 hover:text-white transition-colors">Explore Projects</Link>
-            <Link href="/create" className="text-neutral-400 hover:text-white transition-colors">Create Campaign</Link>
-            <Link href="/dashboard" className="text-neutral-400 hover:text-white transition-colors">Dashboard</Link>
+        <div className="hidden md:flex items-center gap-10">
+            <Link href="/projects" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 hover:text-blue-500 transition-colors">Projects</Link>
+            <Link href="/create" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 hover:text-blue-500 transition-colors">Create</Link>
+            <Link href="/dashboard" className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 hover:text-blue-500 transition-colors">Dashboard</Link>
         </div>
 
         {/* Wallet Connection Button */}
         <div className="flex items-center gap-4">
           {!mounted ? (
-            <div className="h-10 w-32 bg-neutral-800/50 rounded-full animate-pulse" />
+            <div className="h-10 w-32 bg-blue-500/5 animate-pulse border border-blue-500/10" />
           ) : isConnected ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {isWrongChain && (
                 <button
                   onClick={() => switchChain({ chainId: arbitrumSepolia.id })}
                   disabled={isSwitching}
-                  className="px-4 py-2 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-semibold transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
                 >
-                  {isSwitching ? 'Switching…' : 'Switch to Arbitrum Sepolia'}
+                  {isSwitching ? 'SWITCHING...' : 'WRONG_NETWORK'}
                 </button>
               )}
-              <div className="px-4 py-2 rounded-full bg-neutral-800 border border-neutral-700">
+              <div className="px-4 py-2 bg-blue-500/5 border border-blue-500/20">
                 <AddressLink 
                   address={address as string} 
                   shorten={true}
-                  className="text-sm font-mono text-neutral-300" 
+                  className="text-[10px] font-black uppercase text-blue-400" 
                 />
               </div>
               <button
                 onClick={() => disconnect()}
-                className="p-2.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
+                className="w-10 h-10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-black transition-colors"
                 title="Disconnect Wallet"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => connect({ connector: connectors[0] })}
               disabled={isConnecting}
-              className="px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors text-sm font-semibold tracking-wide flex items-center gap-2 disabled:bg-indigo-800 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-blue-500 hover:bg-white text-black transition-colors text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 disabled:bg-blue-500/20 disabled:cursor-not-allowed"
             >
               <Wallet className="w-4 h-4" />
-              {isConnecting ? "Connecting..." : "Connect Wallet"}
+              {isConnecting ? "CONNECTING..." : "Connect_Wallet"}
             </button>
           )}
         </div>

@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useReadContract, useWriteContract, useSwitchChain } from 'wagmi';
-import { parseUnits, formatUnits, parseEventLogs } from 'viem';
+import { formatUnits, parseUnits, parseEventLogs } from 'viem';
 import { createViemHandleClient } from '@iexec-nox/handle';
 import {
   Eye, EyeOff, ArrowRightLeft, Download, Upload,
-  Wallet, Activity, PlusCircle, CheckCircle2, Lock, ShieldAlert, Zap
+  Wallet, Activity, PlusCircle, CheckCircle2, Lock, ShieldAlert, Zap, ChevronRight, LayoutDashboard, Database
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { motion } from "framer-motion";
 import {
   FUNDME_TOKEN_ADDRESS,
   FUNDME_PLATFORM_ADDRESS,
@@ -25,6 +26,13 @@ import {
   type LeaderboardPayload,
 } from '@/lib/contracts';
 import { isUnderpricedGasError, isUserRejection } from '@/lib/errors';
+
+// Animation Variants
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+};
 
 type CreatedProject = { id: number; deadline: bigint; topK: number; finalized: boolean; title: string; description: string; sponsorCount: number; totalFunded?: string; highestBid?: string; isAuction: boolean };
 type SponsoredProject = { id: number; title?: string; deadline?: bigint; finalized?: boolean; contributionHandle?: `0x${string}`; isAuction?: boolean };
@@ -47,11 +55,11 @@ export default function Dashboard() {
   // ==========================================
   const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
-  const[isRevealed, setIsRevealed] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
   const [revealedBalance, setRevealedBalance] = useState<string | null>(null);
   const [isLoadingNox, setIsLoadingNox] = useState(false);
-  const[isDepositing, setIsDepositing] = useState(false);
-  const[isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [withdrawStep, setWithdrawStep] = useState<'idle' | 'unwrapping' | 'waiting' | 'finalizing'>('idle');
   
   const [myCreatedProjects, setMyCreatedProjects] = useState<CreatedProject[]>([]);
@@ -115,7 +123,6 @@ export default function Dashboard() {
           }),
         ]);
 
-        // Count sponsors per project
         const sponsorCountMap = new Map<number, number>();
         allSponsorshipLogs.forEach((log) => {
           const projectId = Number(log.args.projectId);
@@ -290,9 +297,6 @@ export default function Dashboard() {
         ...(publicClient ? await getGasOverride(publicClient) : {}),
       });
 
-      // Wait for the approval to be mined before estimating gas for wrap.
-      // Without this, wrap's gas simulation runs against stale state (allowance = 0),
-      // causing the wallet to show an absurdly high gas estimate.
       if (publicClient) await publicClient.waitForTransactionReceipt({ hash: approveTxHash });
 
       const wrapTxHash = await writeContractAsync({
@@ -347,7 +351,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Poll publicDecrypt until the oracle has processed the unwrap.
       setWithdrawStep('waiting');
       const POLL_INTERVAL_MS = 500;
       const POLL_TIMEOUT_MS = 120_000;
@@ -395,275 +398,311 @@ export default function Dashboard() {
       year: 'numeric', month: 'short', day: 'numeric',
     });
 
-
-  // ==========================================
-  // 7. CONDITIONAL EARLY RETURNS (Must be at bottom)
-  // ==========================================
-  if (!mounted) return null;
+  if (!mounted) return <div className="min-h-screen bg-black" />;
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen pt-12 px-6 flex justify-center items-center">
-        <div className="text-center bg-neutral-900/50 p-12 rounded-3xl border border-neutral-800 shadow-2xl">
-          <Wallet className="w-16 h-16 text-neutral-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Wallet Disconnected</h2>
-          <p className="text-neutral-400">Please connect your wallet using the navigation bar.</p>
-        </div>
+      <div className="min-h-screen pt-24 px-6 flex justify-center items-center bg-black">
+        <motion.div 
+          {...fadeInUp}
+          className="text-center bg-[#050505] p-12 border border-blue-500/20 max-w-md"
+        >
+          <Wallet className="w-16 h-16 text-blue-500/40 mx-auto mb-6" />
+          <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-4">Wallet Disconnected</h2>
+          <p className="text-neutral-500 font-mono text-xs uppercase mb-8">Please connect your wallet using the navigation bar to access the dashboard.</p>
+        </motion.div>
       </div>
     );
   }
 
   if (isWrongNetwork) {
     return (
-      <div className="min-h-screen pt-12 px-6 flex justify-center items-center">
-        <div className="text-center bg-neutral-900/50 p-12 rounded-3xl border border-neutral-800 shadow-2xl max-w-md w-full">
-          <ShieldAlert className="w-16 h-16 text-amber-500 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold mb-4">Wrong Network</h2>
-          <p className="text-neutral-400 mb-8">This application runs on Arbitrum Sepolia. Please switch networks to continue.</p>
+      <div className="min-h-screen pt-24 px-6 flex justify-center items-center bg-black">
+        <motion.div 
+          {...fadeInUp}
+          className="text-center bg-[#050505] p-12 border border-red-500/20 max-w-md w-full"
+        >
+          <ShieldAlert className="w-16 h-16 text-red-500/60 mx-auto mb-6" />
+          <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-4">Wrong Network</h2>
+          <p className="text-neutral-500 font-mono text-xs uppercase mb-8">This application runs on Arbitrum Sepolia. Please switch networks to continue.</p>
           <button 
             onClick={() => switchChain({ chainId: CHAIN_ID })}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-bold transition-all shadow-lg shadow-indigo-500/20"
+            className="w-full py-4 bg-red-500 text-black font-black uppercase tracking-tighter hover:bg-red-400 transition-colors"
           >
             Switch to Arbitrum Sepolia
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  // ==========================================
-  // 8. MAIN UI RENDER
-  // ==========================================
   return (
-    <div className="min-h-screen pt-12 pb-24 px-6 max-w-7xl mx-auto">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">My Dashboard</h1>
-        <p className="text-neutral-400">Manage your confidential funds and track your active campaigns.</p>
-      </div>
+    <div className="min-h-screen bg-black selection:bg-blue-500/30 text-neutral-200">
+      <InfiniteDataStream text="[NOX_DASHBOARD_ACTIVE] —— REAL_TIME_TEE_MONITOR —— ENCRYPTED_VAULT_SYNCHRONIZED —— " color="blue" />
+      
+      <div className="max-w-7xl mx-auto px-6 pt-12 pb-24">
+        {/* Dashboard Header */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-16"
+        >
+          <div className="flex items-center gap-3 text-blue-400 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Confidential Dashboard</span>
+          </div>
+          {/* <h1 className="text-6xl font-black tracking-tighter text-white uppercase mb-2">My <span className="text-blue-500">Node.</span></h1> */}
+          {/* <p className="text-neutral-500 font-mono text-sm uppercase">Manage your confidential funds and track your active campaigns.</p> */}
+        </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Left Column: Tokens */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full" />
-             <h3 className="text-sm font-semibold text-neutral-400 mb-6 uppercase tracking-wider">Your Balances</h3>
-             
-             {/* Public USDC */}
-             <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
-                    <Activity className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-400">Public USDC</p>
-                    <p className="font-bold text-lg">{usdcBalance !== undefined ? formatUnits(usdcBalance as bigint, USDC_DECIMALS) : '0.00'}</p>
-                  </div>
+        <div className="grid lg:grid-cols-12 gap-12">
+          {/* Left Column: Tokens & Vault */}
+          <div className="lg:col-span-4 space-y-8">
+            <motion.div 
+              {...fadeInUp}
+              className="bg-[#050505] border border-blue-500/20 p-8 relative overflow-hidden group"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Database className="w-16 h-16 text-blue-500" />
+              </div>
+              
+              <h3 className="text-[10px] font-mono text-blue-500 mb-8 uppercase tracking-[0.3em]">Encrypted_Vault</h3>
+              
+              {/* Public USDC */}
+              <div className="flex justify-between items-end mb-8">
+                <div>
+                  <p className="text-[10px] font-mono text-neutral-500 uppercase mb-1">Public USDC</p>
+                  <p className="text-2xl font-black text-white tracking-tighter">
+                    {usdcBalance !== undefined ? formatUnits(usdcBalance as bigint, USDC_DECIMALS) : '0.00'}
+                  </p>
                 </div>
+                <div className="text-blue-500/40"><Activity className="w-5 h-5" /></div>
               </div>
 
-              <div className="h-px w-full bg-neutral-800 my-6" />
+              <div className="h-px w-full bg-blue-500/10 mb-8" />
 
               {/* Confidential FUNDME */}
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-neutral-400">Confidential FUNDME</p>
-                    <p className="font-bold text-2xl tracking-widest text-indigo-400">
-                      {isRevealed ? revealedBalance : '***'}
-                    </p>
-                  </div>
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-mono text-blue-500 uppercase mb-1 flex items-center gap-2">
+                    <Lock className="w-3 h-3" /> Confidential FUNDME
+                  </p>
+                  <p className="text-4xl font-black text-blue-500 tracking-tighter tabular-nums">
+                    {isRevealed ? revealedBalance : '••••••'}
+                  </p>
                 </div>
                 <button
                   onClick={() => isRevealed ? setIsRevealed(false) : handleRevealBalance()}
                   disabled={isLoadingNox}
-                  className="p-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors border border-neutral-700 text-neutral-300"
+                  className="w-12 h-12 border border-blue-500/30 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors"
                 >
-                  {isLoadingNox ? <div className="w-5 h-5 border-2 border-neutral-500 border-t-indigo-500 rounded-full animate-spin" /> : (isRevealed ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />)}
+                  {isLoadingNox ? <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" /> : (isRevealed ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />)}
                 </button>
               </div>
-          </div>
+            </motion.div>
 
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6">
-            <div className="flex bg-neutral-950 p-1 rounded-xl mb-6 border border-neutral-800">
-              <button 
-                onClick={() => setActiveTab('deposit')} 
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'deposit' ? 'bg-indigo-600 text-white' : 'text-neutral-500 hover:text-white'}`}
-              >
-                <Download className="w-4 h-4" /> Deposit
-              </button>
-              <button 
-                onClick={() => setActiveTab('withdraw')} 
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors ${activeTab === 'withdraw' ? 'bg-indigo-600 text-white' : 'text-neutral-500 hover:text-white'}`}
-              >
-                <Upload className="w-4 h-4" /> Withdraw
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-neutral-400 mb-2 block">Amount</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    value={amount} 
-                    onChange={(e) => setAmount(e.target.value)} 
-                    placeholder="0.00" 
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder-neutral-700"
-                  />
-                  <span className="absolute right-4 top-3.5 text-neutral-500 text-sm font-semibold">
-                    {activeTab === 'deposit' ? 'USDC' : 'FUNDME'}
-                  </span>
-                </div>
-              </div>
-
-              {activeTab === 'deposit' ? (
+            <motion.div 
+              {...fadeInUp}
+              transition={{ delay: 0.1 }}
+              className="bg-[#050505] border border-blue-500/20 p-1"
+            >
+              <div className="flex bg-black p-1 mb-1">
                 <button 
-                  onClick={handleDeposit} 
-                  disabled={isDepositing || !amount} 
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/40 disabled:cursor-not-allowed text-white rounded-xl font-bold flex justify-center items-center gap-2 transition-all"
+                  onClick={() => setActiveTab('deposit')} 
+                  className={`flex-1 py-3 text-[10px] font-mono font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${activeTab === 'deposit' ? 'bg-blue-500 text-black' : 'text-neutral-500 hover:text-white'}`}
                 >
-                  {isDepositing ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Confirming...</> : 'Wrap to Confidential'}
+                  <Download className="w-3 h-3" /> Deposit
                 </button>
-              ) : (
-                <button
-                  onClick={handleWithdraw}
-                  disabled={isWithdrawing || !amount}
-                  className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 disabled:bg-neutral-800/40 disabled:cursor-not-allowed border border-neutral-700 text-white rounded-xl font-bold flex justify-center items-center gap-2 transition-all"
+                <button 
+                  onClick={() => setActiveTab('withdraw')} 
+                  className={`flex-1 py-3 text-[10px] font-mono font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors ${activeTab === 'withdraw' ? 'bg-blue-500 text-black' : 'text-neutral-500 hover:text-white'}`}
                 >
-                  {withdrawStep === 'unwrapping' ? (
-                    <><div className="w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin" /> Confirm in wallet... (1/2)</>
-                  ) : withdrawStep === 'waiting' ? (
-                    <><div className="w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin" /> Waiting for oracle...</>
-                  ) : withdrawStep === 'finalizing' ? (
-                    <><div className="w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin" /> Confirm in wallet... (2/2)</>
-                  ) : 'Unwrap to USDC'}
+                  <Upload className="w-3 h-3" /> Withdraw
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Projects */}
-        <div className="lg:col-span-2 space-y-8">
-           {/* Created Projects */}
-           <div className="bg-neutral-900/30 border border-neutral-800 rounded-3xl p-8">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-indigo-400" /> My Campaigns
-                </h3>
-                <Link href="/create" className="text-sm text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
-                  <PlusCircle className="w-4 h-4" /> New
-                </Link>
               </div>
-              <p className="text-xs text-neutral-500 mb-6 italic flex items-center gap-1.5">
-                <Lock className="w-3 h-3" /> Funds in active campaigns are locked until the deadline and final reveal.
-              </p>
-
-              {isLoadingProjects ? (
-                <div className="text-center py-8 text-neutral-500"><div className="w-6 h-6 border-2 border-neutral-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2" /> Loading...</div>
-              ) : myCreatedProjects.length === 0 ? (
-                <div className="text-center py-8 text-neutral-500 border border-dashed border-neutral-800 rounded-2xl">No campaigns created yet.</div>
-              ) : (
-                <div className="space-y-4">
-                  {myCreatedProjects.map(p => (
-                    <div key={p.id} className="p-4 bg-neutral-950 border border-neutral-800 hover:border-neutral-700 transition-colors rounded-2xl flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <p className="font-semibold mb-1">
-                          {p.title || `Campaign #${p.id}`} {p.finalized && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-800">Finalized</span>}
-                        </p>
-                        {p.description && <p className="text-xs text-neutral-400 mb-2 line-clamp-1">{p.description}</p>}
-                        <p className="text-xs text-neutral-500">Deadline: {formatDeadline(p.deadline)} • Top K: {p.topK} • Sponsors: {p.sponsorCount}</p>
-                        <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
-                          {p.isAuction ? 'Highest bid:' : 'Total funded:'}
-                          {p.isAuction
-                            ? p.highestBid
-                              ? <span className="text-indigo-400 font-mono">{p.highestBid} FUNDME</span>
-                              : <><Lock className="w-3 h-3 text-indigo-500" /> <span className="text-neutral-400">confidential until reveal</span></>
-                            : p.totalFunded
-                              ? <span className="text-indigo-400 font-mono">{p.totalFunded} FUNDME</span>
-                              : <><Lock className="w-3 h-3 text-indigo-500" /> <span className="text-neutral-400">confidential until reveal</span></>
-                          }
-                        </p>
-                      </div>
-                      <Link href={`/project/${p.id}`} className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap">
-                        Manage
-                      </Link>
-                    </div>
-                  ))}
+              
+              <div className="p-6 space-y-6">
+                <div>
+                  <label className="text-[9px] font-mono text-neutral-500 mb-2 block uppercase tracking-widest">Amount_Input</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={amount} 
+                      onChange={(e) => setAmount(e.target.value)} 
+                      placeholder="0.00" 
+                      className="w-full bg-black border border-blue-500/10 py-4 px-4 text-white font-mono text-xl focus:outline-none focus:border-blue-500/50 transition-colors placeholder-neutral-800"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono text-blue-500/40 font-black uppercase">
+                      {activeTab === 'deposit' ? 'USDC' : 'FME'}
+                    </span>
+                  </div>
                 </div>
-              )}
-           </div>
 
-           {/* Sponsored Projects */}
-           <div className="bg-neutral-900/30 border border-neutral-800 rounded-3xl p-8">
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-6">
-                <ArrowRightLeft className="w-5 h-5 text-purple-400" /> Sponsored Campaigns
-              </h3>
+                {activeTab === 'deposit' ? (
+                  <button 
+                    onClick={handleDeposit} 
+                    disabled={isDepositing || !amount} 
+                    className="w-full py-4 bg-blue-500 text-black font-black uppercase tracking-tighter hover:bg-blue-400 disabled:bg-blue-500/20 disabled:text-blue-500/40 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-all"
+                  >
+                    {isDepositing ? <><div className="w-4 h-4 border-2 border-black/40 border-t-black rounded-full animate-spin" /> Finalizing...</> : 'Wrap to Confidential'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleWithdraw}
+                    disabled={isWithdrawing || !amount}
+                    className="w-full py-4 border border-blue-500 text-blue-500 font-black uppercase tracking-tighter hover:bg-blue-500/10 disabled:border-blue-500/20 disabled:text-blue-500/40 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-all"
+                  >
+                    {withdrawStep === 'unwrapping' ? (
+                      <><div className="w-4 h-4 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" /> TX_CONFIRM_1/2</>
+                    ) : withdrawStep === 'waiting' ? (
+                      <><div className="w-4 h-4 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" /> NOX_WAITING</>
+                    ) : withdrawStep === 'finalizing' ? (
+                      <><div className="w-4 h-4 border-2 border-blue-500/40 border-t-blue-500 rounded-full animate-spin" /> TX_CONFIRM_2/2</>
+                    ) : 'Unwrap to USDC'}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
 
-              {isLoadingProjects ? (
-                <div className="text-center py-8 text-neutral-500"><div className="w-6 h-6 border-2 border-neutral-700 border-t-purple-500 rounded-full animate-spin mx-auto mb-2" /> Loading...</div>
-              ) : mySponsoredProjects.length === 0 ? (
-                <div className="text-center py-8 text-neutral-500 border border-dashed border-neutral-800 rounded-2xl">No sponsored campaigns yet.</div>
-              ) : (
-                <div className="space-y-4">
-                  {mySponsoredProjects.map(p => (
-                    <div key={p.id} className="p-4 bg-neutral-950 border border-neutral-800 rounded-2xl flex justify-between items-center">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold text-neutral-400 flex-shrink-0">
-                          #{p.id}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold mb-1 flex items-center gap-2 flex-wrap">
-                            {p.title || `Campaign #${p.id}`}
-                            {p.isAuction && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-600/10 text-amber-400 border border-amber-600/20 flex items-center gap-1">
-                                <Zap className="w-2.5 h-2.5" /> Auction
-                              </span>
-                            )}
-                            {p.finalized && <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-800">Finalized</span>}
-                          </p>
-                          {p.deadline && (
-                            <p className="text-xs text-neutral-500 mb-0.5">Deadline: {formatDeadline(p.deadline)}</p>
-                          )}
-                          <p className="text-xs text-neutral-500 flex items-center gap-1">
-                            Total contributed:
-                            {revealedContributions[p.id] != null ? (
-                              <span className="text-indigo-400 font-mono">{revealedContributions[p.id]} FUNDME</span>
-                            ) : p.contributionHandle ? (
-                              <button
-                                onClick={() => handleRevealContribution(p.id, p.contributionHandle!)}
-                                disabled={revealingContribution[p.id]}
-                                className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-50"
-                              >
-                                {revealingContribution[p.id]
-                                  ? <><div className="w-3 h-3 border border-indigo-500 border-t-transparent rounded-full animate-spin" /> revealing...</>
-                                  : <><Eye className="w-3 h-3" /> reveal</>
-                                }
-                              </button>
-                            ) : (
-                              <><Lock className="w-3 h-3 text-indigo-500" /> <span className="text-neutral-400">confidential</span></>
-                            )}
-                          </p>
-                          {p.isAuction && p.finalized && (
-                            <p className="text-xs text-amber-400 mt-0.5">
-                              Auction ended — check project page to claim refund if applicable.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Link href={`/project/${p.id}`} className="px-4 py-2 border border-neutral-700 hover:border-neutral-600 text-neutral-300 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0">
-                        View
-                      </Link>
-                    </div>
-                  ))}
+          {/* Right Column: Projects */}
+          <div className="lg:col-span-8 space-y-12">
+             {/* Created Projects */}
+             <motion.div 
+               {...fadeInUp}
+               className="bg-[#050505] border border-blue-500/20 p-8 relative"
+             >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-xs font-mono text-blue-500 mb-2 uppercase tracking-[0.4em]">My Campaigns</h3>
+                    <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Project_Initiations.</h2>
+                  </div>
+                  <Link href="/create" className="w-10 h-10 border border-blue-500/30 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-black transition-colors">
+                    <PlusCircle className="w-5 h-5" />
+                  </Link>
                 </div>
-              )}
-           </div>
+
+                {isLoadingProjects ? (
+                  <div className="text-center py-20 font-mono text-blue-500/40 uppercase animate-pulse">Scanning_Network...</div>
+                ) : myCreatedProjects.length === 0 ? (
+                  <div className="text-center py-20 border border-dashed border-blue-500/10 text-neutral-600 font-mono text-xs uppercase">No active campaigns detected in enclave.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {myCreatedProjects.map(p => (
+                      <div key={p.id} className="p-6 border border-blue-500/10 hover:border-blue-500/30 transition-colors bg-black flex justify-between items-center gap-6 group">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-2">
+                             <span className="text-[10px] font-mono text-blue-500/40">ID:{p.id.toString().padStart(4, '0')}</span>
+                             {p.finalized && <span className="text-[9px] font-mono text-green-500 border border-green-500/30 px-2 py-0.5 uppercase">Finalized</span>}
+                             {p.isAuction && <span className="text-[9px] font-mono text-amber-500 border border-amber-500/30 px-2 py-0.5 uppercase">Auction</span>}
+                          </div>
+                          <h4 className="text-xl font-black text-white tracking-tighter uppercase mb-1 truncate">{p.title || `Unnamed_Campaign`}</h4>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[10px] text-neutral-500 uppercase">
+                             <span>Deadline: {formatDeadline(p.deadline)}</span>
+                             <span>Sponsors: {p.sponsorCount}</span>
+                             <span className="text-blue-500/60 flex items-center gap-1">
+                               {p.isAuction ? 'High_Bid:' : 'Total_Funded:'}
+                               {p.isAuction
+                                 ? p.highestBid
+                                   ? <span className="text-blue-500 font-bold">{p.highestBid} FME</span>
+                                   : <Lock className="w-2.5 h-2.5" />
+                                 : p.totalFunded
+                                   ? <span className="text-blue-500 font-bold">{p.totalFunded} FME</span>
+                                   : <Lock className="w-2.5 h-2.5" />
+                               }
+                             </span>
+                          </div>
+                        </div>
+                        <Link href={`/project/${p.id}`} className="px-6 py-3 border border-blue-500/20 text-blue-500 font-mono text-[10px] font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-black transition-colors whitespace-nowrap">
+                          View
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+             </motion.div>
+
+             {/* Sponsored Projects */}
+             <motion.div 
+               {...fadeInUp}
+               transition={{ delay: 0.2 }}
+               className="bg-[#050505] border border-blue-500/20 p-8"
+             >
+                <div className="mb-8">
+                  <h3 className="text-xs font-mono text-blue-500 mb-2 uppercase tracking-[0.4em]">Active Sponsorships</h3>
+                  <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Contribution_Logs.</h2>
+                </div>
+
+                {isLoadingProjects ? (
+                  <div className="text-center py-20 font-mono text-blue-500/40 uppercase animate-pulse">Decrypting_Logs...</div>
+                ) : mySponsoredProjects.length === 0 ? (
+                  <div className="text-center py-20 border border-dashed border-blue-500/10 text-neutral-600 font-mono text-xs uppercase">No sponsorship data available.</div>
+                ) : (
+                  <div className="space-y-4">
+                    {mySponsoredProjects.map(p => (
+                      <div key={p.id} className="p-6 border border-blue-500/10 bg-black flex justify-between items-center group">
+                        <div className="flex items-center gap-6 flex-1 min-w-0">
+                          <div className="w-12 h-12 border border-blue-500/10 flex items-center justify-center font-black text-blue-500/30 font-mono text-sm shrink-0">
+                            #{p.id}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="text-lg font-black text-white tracking-tighter uppercase truncate">{p.title || `Campaign_${p.id}`}</h4>
+                              {p.isAuction && <span className="text-[9px] font-mono text-amber-500 uppercase tracking-widest"><Zap className="w-2 h-2 inline mr-1" />Auction</span>}
+                            </div>
+                            <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[10px] text-neutral-500 uppercase">
+                              {p.deadline && <span>Deadline: {formatDeadline(p.deadline)}</span>}
+                              <div className="flex items-center gap-2">
+                                <span>Contributed:</span>
+                                {revealedContributions[p.id] != null ? (
+                                  <span className="text-blue-500 font-bold">{revealedContributions[p.id]} FME</span>
+                                ) : p.contributionHandle ? (
+                                  <button
+                                    onClick={() => handleRevealContribution(p.id, p.contributionHandle!)}
+                                    disabled={revealingContribution[p.id]}
+                                    className="text-blue-500/60 hover:text-blue-500 flex items-center gap-1 transition-colors"
+                                  >
+                                    {revealingContribution[p.id]
+                                      ? <div className="w-2.5 h-2.5 border border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                      : <><Eye className="w-2.5 h-2.5" /> [REVEAL]</>
+                                    }
+                                  </button>
+                                ) : (
+                                  <Lock className="w-2.5 h-2.5 text-blue-500/20" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <Link href={`/project/${p.id}`} className="w-10 h-10 border border-blue-500/10 flex items-center justify-center text-blue-500/40 hover:text-blue-500 hover:border-blue-500/30 transition-all">
+                          <ChevronRight className="w-5 h-5" />
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+             </motion.div>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfiniteDataStream({ text, color }: { text: string, color: 'blue' | 'indigo' }) {
+  const textColor = color === 'blue' ? 'text-blue-500/40' : 'text-indigo-500/40';
+  const borderColor = color === 'blue' ? 'border-blue-500/10' : 'border-indigo-500/10';
+  
+  return (
+    <div className={`w-full overflow-hidden bg-black border-y ${borderColor} py-1.5 flex whitespace-nowrap`}>
+      <motion.div
+        className={`font-mono ${textColor} text-[9px] tracking-[0.5em] uppercase flex`}
+        animate={{ x: ["0%", "-50%"] }}
+        transition={{ ease: "linear", duration: 30, repeat: Infinity }}
+      >
+        <span>{text.repeat(10)}</span>
+        <span>{text.repeat(10)}</span>
+      </motion.div>
     </div>
   );
 }
