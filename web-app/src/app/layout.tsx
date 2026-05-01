@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "../components/Navbar"; 
@@ -7,6 +7,12 @@ import { Navbar } from "../components/Navbar";
 const inter = Inter({ 
   subsets: ["latin"],
   variable: "--font-inter",
+  display: 'swap',
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: 'swap',
 });
 
@@ -23,10 +29,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body 
-        className={`${inter.variable} font-sans bg-neutral-950 text-neutral-50 antialiased min-h-screen flex flex-col`}
+        className={`${inter.variable} ${jetbrains.variable} font-mono bg-[#000000] text-neutral-50 antialiased min-h-screen flex flex-col`}
       >
         <Providers>
-          {/* Navbar is placed here, above the page content */}
           <Navbar />
           <main className="flex-grow">
             {children}
