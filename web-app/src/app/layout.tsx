@@ -19,6 +19,25 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "FundMe | Confidential Web3 Crowdfunding",
   description: "Fund the future, confidentially. Built on Arbitrum Sepolia using ERC-7984 and iExec Nox protocol for absolute secrecy and gamified leaderboards.",
+  openGraph: {
+    title: "FundMe | Confidential Web3 Crowdfunding",
+    description: "Fund the future, confidentially. Built on Arbitrum Sepolia using ERC-7984 and iExec Nox protocol for absolute secrecy and gamified leaderboards.",
+    images: [
+      {
+        url: "/0.png",
+        width: 1200,
+        height: 630,
+        alt: "FundMe Platform Preview",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FundMe | Confidential Web3 Crowdfunding",
+    description: "Fund the future, confidentially. Built on Arbitrum Sepolia using ERC-7984 and iExec Nox protocol for absolute secrecy and gamified leaderboards.",
+    images: ["/0.png"],
+  },
 };
 
 export default function RootLayout({
