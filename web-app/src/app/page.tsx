@@ -209,7 +209,7 @@ export default function LandingPage() {
               
               <p className="text-lg text-neutral-400 font-mono mb-10 leading-tight">
                 FUNDME LIVES ON ARBITRUM, BUT THE COMPUTATION LIVES IN THE SECURE ENCLAVE. <br />
-                <span className="text-white">NO FHE LATENCY. PURE TEE SECURITY.</span> ONLY THE NOX PROTOCOL CAN DECRYPT AND RANK SPONSORS WITHIN HARDWARE-LEVEL ISOLATION.
+                <span className="text-white">PURE TEE SECURITY.</span> ONLY THE NOX PROTOCOL CAN DECRYPT AND RANK SPONSORS WITHIN HARDWARE-LEVEL ISOLATION.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
