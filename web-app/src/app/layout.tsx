@@ -17,6 +17,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fundme-2026.vercel.app"),
   title: "FundMe | Confidential Web3 Crowdfunding",
   description: "Fund the future, confidentially. Built on Arbitrum Sepolia using ERC-7984 and iExec Nox protocol for absolute secrecy and gamified leaderboards.",
   openGraph: {
