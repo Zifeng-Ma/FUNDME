@@ -620,7 +620,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <Link href={`/project/${p.id}`} className="px-6 py-3 border border-border-strong text-blue-500 font-mono text-[10px] font-black uppercase tracking-tighter hover:bg-blue-500 hover:text-black transition-colors whitespace-nowrap bg-surface-base">
-                          View
+                          <ChevronRight className="w-5 h-5" />
                         </Link>
                       </div>
                     ))}

@@ -238,7 +238,7 @@ export default function ProjectsPage() {
           >
             <div className="flex items-center gap-3 text-blue-400 font-mono text-xs mb-4 tracking-[0.3em] uppercase">
               <Search className="w-4 h-4" />
-              <span>Network Explorer</span>
+              <span>Project Explorer</span>
             </div>
             <h1 className="text-6xl font-black tracking-tighter text-white uppercase mb-6 leading-none">
               Active <span className="text-blue-500">Projects.</span>
