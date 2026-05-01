@@ -520,6 +520,14 @@ export default function Dashboard() {
               </div>
               
               <div className="p-6 space-y-6">
+                {activeTab === 'deposit' && (
+                  <div className="p-3 bg-green-500/5 border border-green-500/20 flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <p className="text-[10px] font-mono text-green-400 uppercase tracking-widest leading-relaxed">
+                      Need test USDC? Get some at <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-green-300 transition-colors">faucet.circle.com</a>
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label className="text-[9px] font-mono text-neutral-500 mb-2 block uppercase tracking-widest">Amount_Input</label>
                   <div className="relative">
